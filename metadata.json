@@ -1,0 +1,5 @@
+{
+  "name": "AI Photo Poet",
+  "description": "Find a random piece of fine art and let AI generate a unique three-line poem inspired by the image. Export and share your poetic creations.",
+  "requestFramePermissions": []
+}
