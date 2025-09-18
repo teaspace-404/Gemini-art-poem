@@ -1,8 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { GoogleGenAI } from '@google/genai';
 import { MuseumIcon, DownloadIcon, RefreshIcon, SparklesIcon, DocumentTextIcon, InfoIcon } from './components/Icons';
 import PoemEditor from './components/PoemEditor';
 import ArtworkInfoModal from './components/ArtworkInfoModal';
+
+// Add a declaration for html2canvas since it's loaded from a script tag
+declare const html2canvas: any;
 
 // Interface for logging AI interactions
 interface LogEntry {
@@ -21,7 +24,9 @@ interface ArtworkInfo {
 const App: React.FC = () => {
     // Core state
     const [capturedImage, setCapturedImage] = useState<string | null>(null);
+    const [artworkImageUrl, setArtworkImageUrl] = useState<string | null>(null);
     const [poem, setPoem] = useState<string | null>(null);
+    const [editablePoem, setEditablePoem] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
     const [artworkInfo, setArtworkInfo] = useState<ArtworkInfo | null>(null);
     const [showArtworkInfo, setShowArtworkInfo] = useState<boolean>(false);
@@ -40,6 +45,11 @@ const App: React.FC = () => {
     const [keywordGenerationLog, setKeywordGenerationLog] = useState<LogEntry | null>(null);
     const [poemGenerationLog, setPoemGenerationLog] = useState<LogEntry | null>(null);
     const [showLogs, setShowLogs] = useState<boolean>(false);
+    
+    // Effect to update editable poem when the generated poem changes
+    useEffect(() => {
+        setEditablePoem(poem);
+    }, [poem]);
 
 
     // Step 1: Generate keywords from the captured image
@@ -126,6 +136,14 @@ const App: React.FC = () => {
         setIsFetchingArt(true);
         setError(null);
         setArtworkInfo(null);
+        setCapturedImage(null);
+        setArtworkImageUrl(null);
+        setPoem(null);
+        setKeywords([]);
+        setPoemLines(['', '', '']);
+        setKeywordGenerationLog(null);
+        setPoemGenerationLog(null);
+        setShowLogs(false);
 
         try {
             const response = await fetch('https://api.artic.edu/api/v1/artworks?fields=id,title,image_id,artist_display,medium_display,credit_line&limit=100');
@@ -137,6 +155,7 @@ const App: React.FC = () => {
             
             const randomArt = artworksWithImages[Math.floor(Math.random() * artworksWithImages.length)];
             const imageUrl = `https://www.artic.edu/iiif/2/${randomArt.image_id}/full/843,/0/default.jpg`;
+            setArtworkImageUrl(imageUrl);
 
             // Store artwork metadata
             setArtworkInfo({
@@ -146,6 +165,7 @@ const App: React.FC = () => {
                 credit: randomArt.credit_line
             });
 
+            // Fetch image as a blob to create a data URL. This helps with CORS for Gemini.
             const imageResponse = await fetch(imageUrl);
             if (!imageResponse.ok) throw new Error('Failed to fetch the artwork image.');
             
@@ -167,67 +187,72 @@ const App: React.FC = () => {
     };
 
 
-    const handleReset = () => {
-        setCapturedImage(null);
-        setPoem(null);
-        setError(null);
-        setKeywords([]);
-        setPoemLines(['', '', '']);
-        setIsGeneratingKeywords(false);
-        setIsGeneratingPoem(false);
-        setIsFetchingArt(false);
-        setKeywordGenerationLog(null);
-        setPoemGenerationLog(null);
-        setShowLogs(false);
-        setArtworkInfo(null);
-        setShowArtworkInfo(false);
+    const handleChangeArtwork = () => {
+        handleFetchArt();
     };
 
     const handleExport = () => {
-        if (!capturedImage || !poem) return;
+        if (!artworkImageUrl || !editablePoem) {
+            setError("Cannot export without an image and a poem.");
+            return;
+        }
 
-        const exportCanvas = document.createElement('canvas');
-        const ctx = exportCanvas.getContext('2d');
-        if (!ctx) return;
+        // 1. Create a temporary container for the export content.
+        const exportRoot = document.createElement('div');
+        // Style it to be off-screen and have a fixed width for consistent output.
+        exportRoot.style.position = 'absolute';
+        exportRoot.style.left = '-9999px';
+        exportRoot.style.width = '843px'; // Match the artwork width
+        exportRoot.style.background = '#111827'; // bg-gray-900
+        exportRoot.style.padding = '40px';
+        exportRoot.style.boxSizing = 'content-box';
 
-        const img = new Image();
-        img.onload = () => {
-            const padding = 60;
-            const textLineHeight = 40;
-            const poemLines = poem.split('\n');
-            const dateText = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
-            
-            const textBlockHeight = (poemLines.length + 2) * textLineHeight;
 
-            exportCanvas.width = img.width;
-            exportCanvas.height = img.height + textBlockHeight + padding;
+        // 2. Create the image element.
+        const imgElement = document.createElement('img');
+        imgElement.src = artworkImageUrl;
+        imgElement.crossOrigin = 'anonymous'; // Important for html2canvas
+        imgElement.width = 843;
 
-            ctx.fillStyle = '#111827'; // bg-gray-900
-            ctx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
-            
-            ctx.drawImage(img, 0, 0);
-
-            ctx.fillStyle = 'white';
-            ctx.textAlign = 'center';
-
-            ctx.font = '32px serif';
-            let currentY = img.height + padding;
-            poemLines.forEach(line => {
-                ctx.fillText(line, exportCanvas.width / 2, currentY);
-                currentY += textLineHeight;
-            });
-            
-            ctx.font = '24px sans-serif';
-            ctx.fillStyle = '#9CA3AF'; // text-gray-400
-            currentY += textLineHeight / 2;
-            ctx.fillText(dateText, exportCanvas.width / 2, currentY);
-
+        // 3. Create the poem element.
+        const poemElement = document.createElement('div');
+        poemElement.innerText = editablePoem;
+        poemElement.style.fontFamily = 'serif';
+        poemElement.style.color = 'white';
+        poemElement.style.fontSize = '36px';
+        poemElement.style.textAlign = 'center';
+        poemElement.style.marginTop = '40px';
+        poemElement.style.whiteSpace = 'pre-wrap'; // Preserve line breaks from textarea
+        poemElement.style.lineHeight = '1.5';
+        
+        // 4. Assemble the structure.
+        exportRoot.appendChild(imgElement);
+        exportRoot.appendChild(poemElement);
+        document.body.appendChild(exportRoot);
+    
+        // 5. Use html2canvas to take a "snapshot".
+        html2canvas(exportRoot, {
+            useCORS: true, // Asks html2canvas to fetch the image with CORS headers
+            allowTaint: true,
+            backgroundColor: '#111827',
+            logging: true,
+        }).then(canvas => {
+            // 6. Trigger download.
             const link = document.createElement('a');
             link.download = `ai-art-poet-${Date.now()}.png`;
-            link.href = exportCanvas.toDataURL('image/png');
+            link.href = canvas.toDataURL('image/png');
             link.click();
-        };
-        img.src = capturedImage;
+
+            // 7. Clean up the temporary DOM element.
+            document.body.removeChild(exportRoot);
+        }).catch(err => {
+            console.error("html2canvas failed:", err);
+            setError("Failed to export the image. There might be a network or browser issue.");
+            // Clean up even if it fails.
+            if (document.body.contains(exportRoot)) {
+                document.body.removeChild(exportRoot);
+            }
+        });
     };
 
     const handleDownloadLog = () => {
@@ -236,6 +261,8 @@ const App: React.FC = () => {
             artwork: artworkInfo,
             keywordGeneration: keywordGenerationLog,
             poemGeneration: poemGenerationLog,
+            userPrompts: poemLines,
+            finalPoem: editablePoem,
         };
         
         const logContent = JSON.stringify(logData, null, 2);
@@ -252,11 +279,17 @@ const App: React.FC = () => {
 
     // Renders the main content based on the current state of the app
     const renderContent = () => {
-        if (poem) {
+        if (editablePoem) {
             return (
-                <div className="w-full">
-                    <p className="whitespace-pre-wrap font-serif text-xl md:text-2xl leading-relaxed">{poem}</p>
-                    <div className="mt-6 flex flex-wrap justify-center gap-4">
+                <div className="w-full text-center">
+                    <textarea
+                        value={editablePoem}
+                        onChange={(e) => setEditablePoem(e.target.value)}
+                        className="w-full bg-transparent border-none focus:outline-none focus:ring-0 text-center font-serif text-xl md:text-2xl leading-relaxed text-white resize-none"
+                        rows={4}
+                        aria-label="Editable poem"
+                    />
+                    <div className="mt-4 flex flex-wrap justify-center gap-4">
                         <ActionButton onClick={handleExport} icon={<DownloadIcon />} text="Export Poemgram" />
                         <ActionButton onClick={handleDownloadLog} icon={<DocumentTextIcon />} text="Download Log" variant="secondary" />
                     </div>
@@ -309,7 +342,7 @@ const App: React.FC = () => {
                 </header>
                 
                 <div className="w-full aspect-square bg-black rounded-lg overflow-hidden shadow-xl border-4 border-gray-700 relative flex items-center justify-center">
-                    {isFetchingArt && <LoadingSpinner text="Finding artwork..." />}
+                    {isFetchingArt && <LoadingSpinner text="Finding new artwork..." />}
                     {!isFetchingArt && capturedImage && (
                         <>
                             <img 
@@ -328,20 +361,23 @@ const App: React.FC = () => {
                             )}
                         </>
                     )}
-                     {!isFetchingArt && !capturedImage && (
+                     {!isFetchingArt && !capturedImage && !error && (
                         <div className="text-gray-600 flex flex-col items-center">
                             <MuseumIcon />
                             <p className="mt-2 text-sm">Artwork will appear here</p>
                         </div>
                     )}
+                    {!isFetchingArt && error && (
+                         <div className="text-red-400 p-4">{error}</div>
+                    )}
                 </div>
 
 
                 <div className="w-full mt-6 flex justify-center gap-4">
-                    {!capturedImage ? (
+                    {!capturedImage && !isFetchingArt ? (
                         <ActionButton onClick={handleFetchArt} disabled={isFetchingArt || isGeneratingKeywords} icon={<MuseumIcon />} text="Find Artwork" />
                     ) : (
-                        <ActionButton onClick={handleReset} icon={<RefreshIcon />} text="Change One" />
+                        <ActionButton onClick={handleChangeArtwork} disabled={isFetchingArt} icon={<RefreshIcon />} text="Find Another" />
                     )}
                 </div>
 
