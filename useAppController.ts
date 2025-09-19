@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { trackEvent } from './components/analytics';
+import { translations } from './translations';
 
 // Add a declaration for html2canvas since it's loaded from a script tag
 declare const html2canvas: any;
@@ -99,6 +100,14 @@ export const useAppController = () => {
     // State for bookmarking and liking, with persistence to localStorage
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
     const [likedPoems, setLikedPoems] = useState<LikedPoem[]>([]);
+    
+    // State for internationalization (i18n)
+    const [language, setLanguage] = useState<'en' | 'cn'>('en');
+
+    const supportedLanguages = [
+        { code: 'en' as const, name: 'EN' },
+        { code: 'cn' as const, name: '中文' },
+    ];
 
     // Load saved data from localStorage on initial app load.
     useEffect(() => {
@@ -176,6 +185,25 @@ export const useAppController = () => {
             if (interval) clearInterval(interval);
         };
     }, [userWantsToGenerate, isKeywordsReady, isArtlessMode]);
+
+    // Translation function (t)
+    const t = useCallback((key: keyof typeof translations.en, replacements?: Record<string, string | number>) => {
+        let text = translations[language]?.[key] || translations.en[key];
+        if (replacements) {
+            Object.entries(replacements).forEach(([placeholder, value]) => {
+                text = text.replace(`{${placeholder}}`, String(value));
+            });
+        }
+        return text;
+    }, [language]);
+    
+    // Handler to set language
+    const handleSetLanguage = useCallback((lang: 'en' | 'cn') => {
+        if (lang !== language) {
+            setLanguage(lang);
+            trackEvent('language_changed', { newLang: lang });
+        }
+    }, [language]);
 
     // This function runs in the background to fetch keywords from Gemini for the current artwork.
     const generateKeywords = useCallback(async (imageDataUrl: string, requestId: number) => {
@@ -711,6 +739,8 @@ export const useAppController = () => {
         bookmarks,
         likedPoems,
         isCurrentArtworkBookmarked,
+        language,
+        supportedLanguages,
 
         // Setters / Handlers
         setEditablePoem,
@@ -733,6 +763,8 @@ export const useAppController = () => {
         handleDownloadLog,
         generatePoem,
         handleFinalizePoemManually,
-        handleRequestInspirationFromEditor
+        handleRequestInspirationFromEditor,
+        handleSetLanguage,
+        t
     };
 }

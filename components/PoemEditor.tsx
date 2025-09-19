@@ -15,7 +15,8 @@ const PoemEditor: React.FC = () => {
         MAX_REQUESTS: maxRequests,
         handleRequestInspirationFromEditor: onGenerateKeywords,
         isGeneratingKeywords,
-        isArtlessMode
+        isArtlessMode,
+        t
     } = useAppContext();
 
     // State to track which input line is currently active for adding keywords.
@@ -31,12 +32,12 @@ const PoemEditor: React.FC = () => {
             const lowerCaseLine = line.toLowerCase();
             for (const keyword of forbiddenKeywords) {
                 if (lowerCaseLine.includes(keyword)) {
-                    return { isValid: false, message: `Please avoid using instructional words like "${keyword}".` };
+                    return { isValid: false, message: t('validationError', { keyword }) };
                 }
             }
         }
         return { isValid: true, message: null };
-    }, [poemLines]);
+    }, [poemLines, t]);
 
     const isManualFinalizeDisabled = useMemo(() => {
         return poemLines.every(line => line.trim() === '');
@@ -70,7 +71,7 @@ const PoemEditor: React.FC = () => {
             
             {/* Section 1: Poem Line Inputs */}
             <div>
-                <h3 className="font-bold text-lg mb-2 text-stone-700">Craft Your Poem's Theme</h3>
+                <h3 className="font-bold text-lg mb-2 text-stone-700">{t('craftTheme')}</h3>
                 <div className="flex flex-col gap-3">
                     {poemLines.map((line, index) => (
                         <input
@@ -79,7 +80,7 @@ const PoemEditor: React.FC = () => {
                             value={line}
                             onChange={(e) => handleInputChange(e, index)}
                             onFocus={() => setActiveLineIndex(index)} // Set this line as active on focus
-                            placeholder={activeLineIndex === index ? 'Craft your ideas here...' : `Tap here to make Line ${index + 1} active...`}
+                            placeholder={activeLineIndex === index ? t('craftPlaceholder') : t('activateLinePlaceholder', { lineNumber: index + 1 })}
                             className={`w-full bg-white border-2 border-dashed border-stone-300 rounded-md p-3 transition-all text-stone-800 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 ${activeLineIndex === index ? 'border-slate-500' : ''}`}
                             maxLength={100}
                         />
@@ -94,7 +95,7 @@ const PoemEditor: React.FC = () => {
              {/* Section 2: On-demand Keyword Generation */}
             {keywords.length === 0 && !isArtlessMode && (
                 <div className="text-center border-t border-b border-stone-200 py-4 my-2">
-                     <p className="text-sm text-stone-600 mb-3">Feeling stuck? Let AI suggest some ideas.</p>
+                     <p className="text-sm text-stone-600 mb-3">{t('stuckPrompt')}</p>
                      <button
                         onClick={onGenerateKeywords}
                         disabled={isGeneratingKeywords}
@@ -103,12 +104,12 @@ const PoemEditor: React.FC = () => {
                         {isGeneratingKeywords ? (
                             <>
                                 <div className="w-4 h-4 border-2 border-stone-200 border-t-slate-500 rounded-full animate-spin"></div>
-                                <span>Generating...</span>
+                                <span>{t('generating')}</span>
                             </>
                         ) : (
                              <>
                                 <SparklesButtonIcon className="h-5 w-5" />
-                                <span>Get AI Inspiration</span>
+                                <span>{t('getAIInspiration')}</span>
                             </>
                         )}
                      </button>
@@ -119,7 +120,7 @@ const PoemEditor: React.FC = () => {
             {keywords.length > 0 && !isArtlessMode && (
                 <div className="flex items-center gap-3 my-2 p-3 bg-stone-50 border border-stone-200 rounded-md">
                     <label htmlFor="restriction-toggle" className="text-sm font-semibold text-stone-600 cursor-pointer">
-                        Restriction Mode
+                        {t('restrictionMode')}
                     </label>
                     <button
                         id="restriction-toggle"
@@ -136,7 +137,7 @@ const PoemEditor: React.FC = () => {
                             role="tooltip"
                             className="absolute bottom-full right-0 mb-2 w-56 p-2 bg-stone-800 text-white text-left text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 z-10"
                         >
-                            When enabled, Gemini is instructed to build the poem strictly around your themes, rather than using them as loose inspiration.
+                            {t('restrictionTooltip')}
                         </div>
                     </div>
                 </div>
@@ -145,7 +146,7 @@ const PoemEditor: React.FC = () => {
             {/* Section 4: Keyword Cloud (only shown if keywords exist) */}
             {keywords.length > 0 && (
                 <div>
-                    <h3 className="font-bold text-lg mb-3 text-stone-700">Tap a word to add it to your active line</h3>
+                    <h3 className="font-bold text-lg mb-3 text-stone-700">{t('tapKeyword')}</h3>
                     <div className="flex flex-wrap gap-2">
                         {keywords.map((keyword, index) => (
                             <button
@@ -170,18 +171,18 @@ const PoemEditor: React.FC = () => {
                     className="font-bold py-3 px-6 rounded-full transition-all duration-300 inline-flex items-center justify-center gap-2 shadow-lg transform hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:scale-100 bg-slate-500 text-white hover:not(:disabled):bg-slate-600 disabled:bg-stone-300"
                 >
                     <PencilIcon />
-                    <span>{isCoolingDown ? 'Please wait...' : 'Create with Gemini'}</span>
+                    <span>{isCoolingDown ? t('pleaseWait') : t('createWithGemini')}</span>
                 </button>
                 <button
                     onClick={onFinalizePoemManually}
                     disabled={isManualFinalizeDisabled}
                     className="font-semibold py-2 px-6 rounded-full transition-all duration-300 inline-flex items-center justify-center gap-2 shadow-sm transform hover:scale-105 active:scale-100 disabled:cursor-not-allowed disabled:scale-100 disabled:opacity-60 bg-white text-slate-600 border border-slate-400 hover:not(:disabled):bg-slate-50"
                 >
-                    Use My Own Words
+                    {t('useMyWords')}
                 </button>
                 <p className="text-xs text-red-600 mt-0 h-4">
                     {requestCount >= maxRequests 
-                        ? "You have reached the session limit." 
+                        ? t('sessionLimit')
                         : validationResult.message}
                 </p>
             </div>

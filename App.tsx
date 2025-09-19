@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from './AppContext';
-import { SearchIcon, ImageIcon, DownloadIcon, RefreshIcon, SparklesIcon, DocumentTextIcon, InfoIcon, HeartIcon, BookmarkIcon, MenuIcon, PencilIcon, SparklesButtonIcon } from './components/Icons';
+import { SearchIcon, ImageIcon, DownloadIcon, RefreshIcon, SparklesIcon, DocumentTextIcon, InfoIcon, HeartIcon, BookmarkIcon, MenuIcon, PencilIcon, SparklesButtonIcon, ChevronDownIcon } from './components/Icons';
 import PoemEditor from './components/PoemEditor';
 import ArtworkInfoModal from './components/ArtworkInfoModal';
 import BookmarkMenu from './components/BookmarkMenu';
@@ -67,7 +67,27 @@ const App: React.FC = () => {
         handleLike,
         handleWriteAnother,
         handleDownloadLog,
+        handleSetLanguage,
+        supportedLanguages,
+        t,
+        language
     } = useAppContext();
+
+    const [isLangDropdownOpen, setIsLangDropdownOpen] = useState(false);
+    const langDropdownRef = useRef<HTMLDivElement>(null);
+
+    // Effect to close dropdown when clicking outside
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (langDropdownRef.current && !langDropdownRef.current.contains(event.target as Node)) {
+                setIsLangDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
 
 
     // Main render method for the App component
@@ -77,13 +97,48 @@ const App: React.FC = () => {
                  <div className="relative group">
                     <button
                         className="flex items-center gap-2 text-stone-600 hover:text-slate-700 transition-colors py-2 px-3 rounded-md hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-slate-500"
-                        title="Open Collections"
+                        title={t('collections')}
                     >
                         <MenuIcon />
-                        <span className="font-semibold hidden sm:inline">Collections</span>
+                        <span className="font-semibold hidden sm:inline">{t('collections')}</span>
                     </button>
                     {/* The BookmarkMenu no longer needs props */}
                     <BookmarkMenu />
+                </div>
+                <div className="relative" ref={langDropdownRef}>
+                    <button
+                        onClick={() => setIsLangDropdownOpen(prev => !prev)}
+                        className="font-semibold text-stone-600 hover:text-slate-700 transition-colors py-2 px-4 rounded-md hover:bg-stone-200 focus:outline-none focus:ring-2 focus:ring-slate-500 flex items-center gap-2"
+                        title="Switch Language"
+                        aria-haspopup="true"
+                        aria-expanded={isLangDropdownOpen}
+                    >
+                        <span>{supportedLanguages.find(l => l.code === language)?.name}</span>
+                        <ChevronDownIcon className={`h-4 w-4 transition-transform ${isLangDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isLangDropdownOpen && (
+                        <div
+                            className="absolute top-full right-0 mt-2 w-32 bg-white border border-stone-200 rounded-md shadow-lg z-50 animate-fadeIn"
+                            role="menu"
+                            aria-orientation="vertical"
+                        >
+                            <div className="p-1">
+                                {supportedLanguages.map(lang => (
+                                    <button
+                                        key={lang.code}
+                                        onClick={() => {
+                                            handleSetLanguage(lang.code);
+                                            setIsLangDropdownOpen(false);
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-sm rounded-md transition-colors ${language === lang.code ? 'bg-slate-100 text-slate-800 font-semibold' : 'text-stone-700 hover:bg-stone-100'}`}
+                                        role="menuitem"
+                                    >
+                                        {lang.name}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -91,8 +146,8 @@ const App: React.FC = () => {
                 
                 {/* Left Column: Artwork Display and Actions */}
                 <div className="md:flex-[0_0_50%] flex flex-col items-center gap-4">
-                    <h1 className="text-3xl sm:text-4xl font-sans font-bold text-stone-900">Poem for Art</h1>
-                    <p className="text-stone-600 mb-4">Find artistic inspiration, guide the verse.</p>
+                    <h1 className="text-3xl sm:text-4xl font-sans font-bold text-stone-900">{t('appTitle')}</h1>
+                    <p className="text-stone-600 mb-4">{t('appSubtitle')}</p>
 
                     <div className="w-full aspect-square bg-white rounded-lg shadow-lg flex items-center justify-center relative border border-stone-200">
                         {isFetchingArt && <LoadingSpinner />}
@@ -111,14 +166,14 @@ const App: React.FC = () => {
                                         <button
                                             onClick={() => setShowArtworkInfo(true)}
                                             className="p-2 text-white bg-black/40 rounded-full hover:bg-black/60 transition-all"
-                                            aria-label="Show artwork information"
+                                            aria-label={t('artworkInfoAria')}
                                         >
                                             <InfoIcon />
                                         </button>
                                         <button
                                             onClick={handleToggleBookmark}
                                             className="p-2 text-white bg-black/40 rounded-full hover:bg-black/60 transition-all"
-                                            aria-label={isCurrentArtworkBookmarked ? "Remove bookmark" : "Bookmark artwork"}
+                                            aria-label={isCurrentArtworkBookmarked ? t('removeBookmarkAria') : t('bookmarkAria')}
                                             aria-pressed={isCurrentArtworkBookmarked}
                                         >
                                             <BookmarkIcon filled={isCurrentArtworkBookmarked} />
@@ -131,15 +186,15 @@ const App: React.FC = () => {
                         {isArtlessMode && (
                             <div className="text-center text-stone-500 p-4">
                                 <SparklesIcon />
-                                <p className="mt-2 font-semibold">Artless Mode</p>
-                                <p className="mt-1 text-sm">Craft a poem from scratch.</p>
+                                <p className="mt-2 font-semibold">{t('artlessMode')}</p>
+                                <p className="mt-1 text-sm">{t('artlessDescription')}</p>
                             </div>
                         )}
                         
                         {!isFetchingArt && !capturedImage && !error && !isArtlessMode && (
                              <div className="text-center text-stone-500">
                                 <ImageIcon />
-                                <p className="mt-2">Magic might happen here.</p>
+                                <p className="mt-2">{t('magicPlaceholder')}</p>
                             </div>
                         )}
                     </div>
@@ -153,7 +208,7 @@ const App: React.FC = () => {
                                 className="bg-slate-500 text-white hover:bg-slate-600 w-52"
                             >
                                 <SearchIcon />
-                                <span>Fetch me Art</span>
+                                <span>{t('fetchArt')}</span>
                             </ActionButton>
                         )}
                         {capturedImage && (
@@ -161,10 +216,10 @@ const App: React.FC = () => {
                                 onClick={handleChangeArtwork}
                                 disabled={isFetchingArt || isChangeArtworkDisabled}
                                 className="bg-stone-200 text-stone-700 hover:bg-stone-300"
-                                title="Find a new piece of art"
+                                title={t('changeArtTitle')}
                             >
                                 <RefreshIcon />
-                                <span>Change One</span>
+                                <span>{t('changeArt')}</span>
                             </ActionButton>
                         )}
                     </div>
@@ -176,13 +231,13 @@ const App: React.FC = () => {
                     {!capturedImage && !isFetchingArt && !error && !isArtlessMode && (
                          <div className="text-center text-stone-500 flex flex-col items-center justify-center h-full">
                             <SparklesIcon />
-                            <p className="mt-2 mb-6">Inspiration awaits</p>
+                            <p className="mt-2 mb-6">{t('inspirationAwaits')}</p>
                             <ActionButton
                                 onClick={handleStartArtlessMode}
                                 className="bg-white text-slate-600 border border-slate-400 hover:bg-slate-50 w-52"
                             >
                                 <PencilIcon />
-                                <span>Write From Scratch</span>
+                                <span>{t('writeFromScratch')}</span>
                             </ActionButton>
                         </div>
                     )}
@@ -192,35 +247,35 @@ const App: React.FC = () => {
                          // The final poem view has the highest priority and is shown once 'editablePoem' has content.
                         !isGeneratingPoem && editablePoem ? (
                             <div className="w-full text-left animate-fadeIn">
-                                <h3 className="font-bold text-lg mb-3 text-stone-700">Your Final Poem</h3>
+                                <h3 className="font-bold text-lg mb-3 text-stone-700">{t('finalPoemTitle')}</h3>
                                 <textarea
                                     value={editablePoem}
                                     onChange={(e) => setEditablePoem(e.target.value)}
                                     rows={4}
                                     className="w-full p-3 bg-stone-50 border border-stone-300 rounded-md font-serif text-lg leading-relaxed focus:outline-none focus:ring-2 focus:ring-slate-500 resize-none"
-                                    aria-label="Final editable poem"
+                                    aria-label={t('finalPoemAriaLabel')}
                                 />
                                 <div className="w-full flex flex-col items-center gap-4 mt-6 relative">
                                      {showLikedFeedback && (
                                         <span className="absolute -top-10 bg-black/70 text-white text-sm px-3 py-1 rounded-full animate-fadeIn">
-                                            Liked this!
+                                            {t('likedFeedback')}
                                         </span>
                                     )}
                                     <ActionButton
                                         onClick={handleExport}
                                         disabled={!editablePoem}
                                         className="bg-slate-500 text-white hover:bg-slate-600 w-52"
-                                        title="Export as PNG"
+                                        title={t('exportPoemgramTitle')}
                                     >
                                         <DownloadIcon />
-                                        <span>Export Poemgram</span>
+                                        <span>{t('exportPoemgram')}</span>
                                     </ActionButton>
                                     <div className="flex items-center justify-center gap-4 mt-2">
                                         <button
                                             onClick={handleLike}
                                             onAnimationEnd={() => setIsLikeBouncing(false)}
                                             className={`p-3 rounded-full transition-all duration-300 transform hover:scale-110 active:scale-100 shadow-md ${isLiked ? 'text-red-500 bg-red-100' : 'text-stone-600 bg-stone-200'} ${isLikeBouncing ? 'animate-bounceLike' : ''}`}
-                                            title={isLiked ? "Unlike" : "Like"}
+                                            title={isLiked ? t('unlikeTitle') : t('likeTitle')}
                                             aria-pressed={isLiked}
                                         >
                                             <HeartIcon filled={isLiked} />
@@ -228,7 +283,7 @@ const App: React.FC = () => {
                                         <button
                                             onClick={handleWriteAnother}
                                             className="p-3 bg-stone-200 text-stone-700 hover:bg-stone-300 rounded-full transition-all duration-300 transform hover:scale-110 active:scale-100 shadow-md"
-                                            title="Generate a new poem"
+                                            title={t('newPoemTitle')}
                                         >
                                             <RefreshIcon />
                                         </button>
@@ -239,7 +294,7 @@ const App: React.FC = () => {
                         ) : isGeneratingPoem ? (
                             <div className="text-center text-stone-600">
                                 <LoadingSpinner />
-                                <p className="mt-4">The muse is working...</p>
+                                <p className="mt-4">{t('museWorking')}</p>
                             </div>
                         // If user hasn't clicked "Inspire Me" or "Write from Scratch" yet, show the choice.
                         ) : !userWantsToGenerate ? (
@@ -249,14 +304,14 @@ const App: React.FC = () => {
                                     className="bg-slate-500 text-white hover:bg-slate-600 text-lg w-60"
                                 >
                                     <SparklesButtonIcon />
-                                    <span>Inspire Me</span>
+                                    <span>{t('inspireMe')}</span>
                                 </ActionButton>
                                  <ActionButton
                                     onClick={handleStartWritingDirectly}
                                     className="bg-white text-slate-600 border border-slate-400 hover:bg-slate-50 w-60"
                                 >
                                     <PencilIcon />
-                                    <span>Write From Scratch</span>
+                                    <span>{t('writeFromScratch')}</span>
                                 </ActionButton>
                             </div>
                         // If user has clicked "Inspire Me" but keywords aren't ready, show "analyzing" spinner.
@@ -276,35 +331,35 @@ const App: React.FC = () => {
              {/* Transparency and Logging Section */}
             <div className="w-full max-w-5xl mx-auto mt-8">
                 <button onClick={() => setShowLogs(!showLogs)} className="text-sm text-stone-500 hover:text-slate-600">
-                    {showLogs ? 'Hide AI Logs' : 'Show AI Logs'}
+                    {showLogs ? t('hideLogs') : t('showLogs')}
                 </button>
                     {showLogs && (
                     <div className="mt-4 p-4 bg-stone-50 border border-stone-200 rounded-lg text-left text-xs text-stone-700 animate-fadeIn space-y-4">
                         <div className="flex justify-between items-start">
                             <div>
-                                <h4 className="font-bold">AI Interaction Log</h4>
-                                <p className="text-stone-500">This log shows the prompts sent to and responses received from the AI.</p>
+                                <h4 className="font-bold">{t('logTitle')}</h4>
+                                <p className="text-stone-500">{t('logDescription')}</p>
                             </div>
-                                <button onClick={handleDownloadLog} title="Download Log" className="p-2 rounded-md hover:bg-stone-200 transition-colors">
+                                <button onClick={handleDownloadLog} title={t('downloadLogTitle')} className="p-2 rounded-md hover:bg-stone-200 transition-colors">
                                 <DocumentTextIcon />
                             </button>
                         </div>
                         
                         {!keywordGenerationLog && !poemGenerationLog && (
-                            <p className="text-stone-500 italic p-2">AI interactions will be logged here once an artwork is fetched or a poem is written.</p>
+                            <p className="text-stone-500 italic p-2">{t('logEmpty')}</p>
                         )}
                         {keywordGenerationLog && (
                             <div>
-                                <p className="font-semibold text-slate-700">Keyword Generation</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>Prompt:</strong> {keywordGenerationLog.prompt}</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>Response:</strong> {keywordGenerationLog.response}</p>
+                                <p className="font-semibold text-slate-700">{t('keywordGeneration')}</p>
+                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('prompt')}</strong> {keywordGenerationLog.prompt}</p>
+                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('response')}</strong> {keywordGenerationLog.response}</p>
                             </div>
                         )}
                         {poemGenerationLog && (
                             <div>
-                                <p className="font-semibold text-slate-700">Poem Generation</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>Prompt:</strong> {poemGenerationLog.prompt}</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>Response:</strong> {poemGenerationLog.response}</p>
+                                <p className="font-semibold text-slate-700">{t('poemGeneration')}</p>
+                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('prompt')}</strong> {poemGenerationLog.prompt}</p>
+                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('response')}</strong> {poemGenerationLog.response}</p>
                             </div>
                         )}
                     </div>
@@ -312,9 +367,7 @@ const App: React.FC = () => {
             </div>
             
              {/* Modal for displaying artwork information */}
-            {showArtworkInfo && artworkInfo && (
-                <ArtworkInfoModal info={artworkInfo} onClose={() => setShowArtworkInfo(false)} />
-            )}
+            {showArtworkInfo && <ArtworkInfoModal />}
 
             {/* Modal for the full-screen, zoomable artwork view. */}
             {isArtworkZoomed && artworkImageUrl && (

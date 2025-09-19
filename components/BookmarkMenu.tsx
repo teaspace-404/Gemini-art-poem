@@ -9,6 +9,7 @@ const BookmarkMenu: React.FC = () => {
         likedPoems,
         handleFetchArtById: onLoadBookmark,
         handleLoadLikedPoem: onLoadLikedPoem,
+        t,
     } = useAppContext();
 
     // Construct the thumbnail URL for a given image ID.
@@ -31,7 +32,7 @@ const BookmarkMenu: React.FC = () => {
                 <div className="px-2 pt-2">
                     <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider flex items-center gap-2">
                         <BookmarkIcon />
-                        Bookmarked Art
+                        {t('bookmarkedArt')}
                     </h3>
                 </div>
                 <div className="p-2">
@@ -42,7 +43,7 @@ const BookmarkMenu: React.FC = () => {
                                     key={bookmark.id}
                                     onClick={() => onLoadBookmark(bookmark.id)}
                                     className="group relative aspect-square bg-stone-200 rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"
-                                    title={`Load artwork: ${bookmark.title}`}
+                                    title={t('loadArtworkTitle', { title: bookmark.title })}
                                     role="menuitem"
                                 >
                                     <img 
@@ -59,7 +60,7 @@ const BookmarkMenu: React.FC = () => {
                             ))}
                         </div>
                     ) : (
-                        <p className="text-xs text-stone-500 text-center p-4">No bookmarked art yet.</p>
+                        <p className="text-xs text-stone-500 text-center p-4">{t('noBookmarks')}</p>
                     )}
                 </div>
 
@@ -70,7 +71,7 @@ const BookmarkMenu: React.FC = () => {
                 <div className="px-2">
                     <h3 className="text-sm font-semibold text-stone-500 uppercase tracking-wider flex items-center gap-2">
                         <HeartIcon />
-                        Liked Poems
+                        {t('likedPoems')}
                     </h3>
                 </div>
                 <div className="p-2 space-y-2">
@@ -98,7 +99,7 @@ const BookmarkMenu: React.FC = () => {
                             );
                        })
                     ) : (
-                        <p className="text-xs text-stone-500 text-center p-4">No liked poems yet.</p>
+                        <p className="text-xs text-stone-500 text-center p-4">{t('noLikedPoems')}</p>
                     )}
                 </div>
             </div>

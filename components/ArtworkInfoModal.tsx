@@ -1,20 +1,17 @@
 import React from 'react';
 import { CloseIcon } from './Icons';
+import { useAppContext } from '../AppContext';
 
-interface ArtworkInfo {
-    title: string;
-    artist: string;
-    medium: string;
-    credit: string;
-    source: string;
-}
+const ArtworkInfoModal: React.FC = () => {
+    const { artworkInfo: info, setShowArtworkInfo, t } = useAppContext();
 
-interface ArtworkInfoModalProps {
-    info: ArtworkInfo;
-    onClose: () => void;
-}
+    const onClose = () => setShowArtworkInfo(false);
 
-const ArtworkInfoModal: React.FC<ArtworkInfoModalProps> = ({ info, onClose }) => {
+    // Return null if there's no info to display, which can happen briefly on close.
+    if (!info) {
+        return null;
+    }
+
     return (
         <div 
             className="fixed inset-0 bg-stone-900/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fadeIn"
@@ -39,20 +36,20 @@ const ArtworkInfoModal: React.FC<ArtworkInfoModalProps> = ({ info, onClose }) =>
                 
                 <div className="space-y-4 text-stone-700">
                     <div>
-                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">Artist</h3>
-                        <p>{info.artist || 'Unknown Artist'}</p>
+                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('artist')}</h3>
+                        <p>{info.artist || t('unknownArtist')}</p>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">Medium</h3>
-                        <p>{info.medium || 'N/A'}</p>
+                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('medium')}</h3>
+                        <p>{info.medium || t('notAvailable')}</p>
                     </div>
                     <div>
-                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">Credit Line</h3>
-                        <p className="text-sm text-stone-500">{info.credit || 'N/A'}</p>
+                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('creditLine')}</h3>
+                        <p className="text-sm text-stone-500">{info.credit || t('notAvailable')}</p>
                     </div>
                      <div>
-                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">Source</h3>
-                        <p className="text-sm text-stone-500">Artwork data provided by the {info.source}.</p>
+                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('source')}</h3>
+                        <p className="text-sm text-stone-500">{t('sourceProvidedBy', { sourceName: info.source })}</p>
                     </div>
                 </div>
             </div>
