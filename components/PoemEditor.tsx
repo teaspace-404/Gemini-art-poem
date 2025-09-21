@@ -1,12 +1,15 @@
+// FIX: Import useState and useMemo from React.
 import React, { useState, useMemo } from 'react';
-import { PencilIcon, SparklesButtonIcon, QuestionMarkCircleIcon } from './Icons';
+import { PencilIcon, SparklesButtonIcon, QuestionMarkCircleIcon } from './icons';
 import { useAppContext } from '../AppContext';
+import KeywordSuggestions from './KeywordSuggestions';
+import ThemeEditor from './ThemeEditor'; // Import the new component
 
 const PoemEditor: React.FC = () => {
     const {
         keywords,
         poemLines,
-        setPoemLines: onPoemLinesChange, // Rename to keep handler logic the same
+        setPoemLines,
         generatePoem,
         handleFinalizePoemManually: onFinalizePoemManually,
         isGeneratingPoem,
@@ -16,16 +19,17 @@ const PoemEditor: React.FC = () => {
         handleRequestInspirationFromEditor: onGenerateKeywords,
         isGeneratingKeywords,
         isArtlessMode,
+        isShareApiAvailable,
+        handleShareWIPPoem,
+        handleClearAllThemes,
+        lastFinalPoem,
+        handleFlipToViewLastPoem,
         t
     } = useAppContext();
 
-    // State to track which input line is currently active for adding keywords.
     const [activeLineIndex, setActiveLineIndex] = useState<number>(0);
     const [isRestrictionMode, setIsRestrictionMode] = useState<boolean>(false);
     
-    // --- Client-Side Validation ---
-
-    // Memoize the validation result to avoid re-calculating on every render.
     const validationResult = useMemo(() => {
         const forbiddenKeywords = ['ignore', 'disregard', 'system prompt', 'instructions', 'dan', 'forget', 'override'];
         for (const line of poemLines) {
@@ -43,56 +47,37 @@ const PoemEditor: React.FC = () => {
         return poemLines.every(line => line.trim() === '');
     }, [poemLines]);
 
+    const isShareDisabled = useMemo(() => {
+        return poemLines.every(line => line.trim() === '');
+    }, [poemLines]);
 
-    // --- Interaction Handlers ---
-
-    // Handles clicking/tapping a keyword. Appends it to the active line.
     const handleKeywordClick = (keyword: string) => {
         const newLines = [...poemLines];
         const currentLine = newLines[activeLineIndex] || '';
         const newLine = currentLine ? `${currentLine} ${keyword}` : keyword;
 
-        // Only update if the new line doesn't exceed the character limit
         if (newLine.length <= 100) {
             newLines[activeLineIndex] = newLine;
-            onPoemLinesChange(newLines);
+            setPoemLines(newLines);
         }
     };
     
-    // Update state when the user types directly into an input field
-    const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>, lineIndex: number) => {
-        const newLines = [...poemLines];
-        newLines[lineIndex] = e.target.value;
-        onPoemLinesChange(newLines);
-    };
-
     return (
         <div className="w-full flex flex-col gap-6 text-left animate-fadeIn">
             
-            {/* Section 1: Poem Line Inputs */}
-            <div>
-                <h3 className="font-bold text-lg mb-2 text-stone-700">{t('craftTheme')}</h3>
-                <div className="flex flex-col gap-3">
-                    {poemLines.map((line, index) => (
-                        <input
-                            key={index}
-                            type="text"
-                            value={line}
-                            onChange={(e) => handleInputChange(e, index)}
-                            onFocus={() => setActiveLineIndex(index)} // Set this line as active on focus
-                            placeholder={activeLineIndex === index ? t('craftPlaceholder') : t('activateLinePlaceholder', { lineNumber: index + 1 })}
-                            className={`w-full bg-white border-2 border-dashed border-stone-300 rounded-md p-3 transition-all text-stone-800 focus:outline-none focus:border-slate-500 focus:ring-1 focus:ring-slate-500 ${activeLineIndex === index ? 'border-slate-500' : ''}`}
-                            maxLength={100}
-                        />
-                    ))}
-                </div>
-                 <div className="text-right text-xs text-stone-500 h-4 pr-1 mt-1">
-                    {/* Show character count only for the active line */}
-                    {`${poemLines[activeLineIndex]?.length || 0} / 100`}
-                </div>
-            </div>
+            {/* Section 1: Poem Line Inputs (Now a separate component) */}
+            <ThemeEditor
+                poemLines={poemLines}
+                onPoemLinesChange={setPoemLines}
+                activeLineIndex={activeLineIndex}
+                onSetActiveLineIndex={setActiveLineIndex}
+                lastFinalPoem={lastFinalPoem}
+                onFlipToViewLastPoem={handleFlipToViewLastPoem}
+                onClearAllThemes={handleClearAllThemes}
+                t={t}
+            />
 
-             {/* Section 2: On-demand Keyword Generation */}
+            {/* Section 2: On-demand Keyword Generation */}
             {keywords.length === 0 && !isArtlessMode && (
                 <div className="text-center border-t border-b border-stone-200 py-4 my-2">
                      <p className="text-sm text-stone-600 mb-3">{t('stuckPrompt')}</p>
@@ -143,25 +128,19 @@ const PoemEditor: React.FC = () => {
                 </div>
             )}
 
-            {/* Section 4: Keyword Cloud (only shown if keywords exist) */}
+            {/* Section 4: Keyword Cloud (delegated to new component) */}
             {keywords.length > 0 && (
-                <div>
-                    <h3 className="font-bold text-lg mb-3 text-stone-700">{t('tapKeyword')}</h3>
-                    <div className="flex flex-wrap gap-2">
-                        {keywords.map((keyword, index) => (
-                            <button
-                                key={index}
-                                onClick={() => handleKeywordClick(keyword)}
-                                className="bg-stone-200 text-stone-700 py-1 px-3 rounded-full text-sm cursor-pointer hover:bg-slate-500 hover:text-white active:bg-slate-600 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-500"
-                                title="Tap to add to the active line above"
-                            >
-                                {keyword}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <KeywordSuggestions
+                    keywords={keywords}
+                    onGenerateKeywords={onGenerateKeywords}
+                    isGeneratingKeywords={isGeneratingKeywords}
+                    onKeywordClick={handleKeywordClick}
+                    isShareApiAvailable={isShareApiAvailable}
+                    onShare={handleShareWIPPoem}
+                    isShareDisabled={isShareDisabled}
+                    t={t}
+                />
             )}
-
 
             {/* Section 5: Action Buttons */}
             <div className="flex flex-col items-center mt-6 gap-4">

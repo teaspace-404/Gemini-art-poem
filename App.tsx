@@ -1,22 +1,26 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAppContext } from './AppContext';
-import { DocumentTextIcon, MenuIcon, ChevronDownIcon } from './components/Icons';
+import { MenuIcon, ChevronDownIcon, EnvelopeIcon } from './components/icons';
 import ArtworkInfoModal from './components/ArtworkInfoModal';
 import BookmarkMenu from './components/BookmarkMenu';
 import ArtworkDisplay from './components/ArtworkDisplay';
 import PoemGenerationPanel from './components/PoemGenerationPanel';
+import SupportModal from './components/SupportModal';
+import FeedbackModal from './components/FeedbackModal';
+import LogsModal from './components/LogsModal';
 
 const App: React.FC = () => {
     const {
         artworkImageUrl,
         showArtworkInfo,
         isArtworkZoomed,
-        keywordGenerationLog,
-        poemGenerationLog,
         showLogs,
+        showSupportModal,
+        showFeedbackModal,
         setIsArtworkZoomed,
         setShowLogs,
-        handleDownloadLog,
+        setShowSupportModal,
+        setShowFeedbackModal,
         handleSetLanguage,
         supportedLanguages,
         t,
@@ -98,41 +102,41 @@ const App: React.FC = () => {
 
              {/* Transparency and Logging Section */}
             <div className="w-full max-w-5xl mx-auto mt-8">
-                <button onClick={() => setShowLogs(!showLogs)} className="text-sm text-stone-500 hover:text-slate-600">
-                    {showLogs ? t('hideLogs') : t('showLogs')}
-                </button>
-                    {showLogs && (
-                    <div className="mt-4 p-4 bg-stone-50 border border-stone-200 rounded-lg text-left text-xs text-stone-700 animate-fadeIn space-y-4">
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <h4 className="font-bold">{t('logTitle')}</h4>
-                                <p className="text-stone-500">{t('logDescription')}</p>
-                            </div>
-                                <button onClick={handleDownloadLog} title={t('downloadLogTitle')} className="p-2 rounded-md hover:bg-stone-200 transition-colors">
-                                <DocumentTextIcon />
-                            </button>
-                        </div>
-                        
-                        {!keywordGenerationLog && !poemGenerationLog && (
-                            <p className="text-stone-500 italic p-2">{t('logEmpty')}</p>
-                        )}
-                        {keywordGenerationLog && (
-                            <div>
-                                <p className="font-semibold text-slate-700">{t('keywordGeneration')}</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('prompt')}</strong> {keywordGenerationLog.prompt}</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('response')}</strong> {keywordGenerationLog.response}</p>
-                            </div>
-                        )}
-                        {poemGenerationLog && (
-                            <div>
-                                <p className="font-semibold text-slate-700">{t('poemGeneration')}</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('prompt')}</strong> {poemGenerationLog.prompt}</p>
-                                <p className="mt-1 p-2 bg-stone-200 rounded"><strong>{t('response')}</strong> {poemGenerationLog.response}</p>
-                            </div>
-                        )}
-                    </div>
-                )}
+                 <div className="flex justify-center items-center gap-4">
+                    <button
+                        onClick={() => setShowLogs(true)}
+                        className="text-sm text-stone-500 hover:text-slate-600 transition-colors"
+                    >
+                        {t('showLogs')}
+                    </button>
+                    <span className="text-stone-300">|</span>
+                    <button
+                        onClick={() => setShowSupportModal(true)}
+                        className="text-sm text-stone-500 hover:text-slate-600 transition-colors"
+                        title={t('buyMeACoffeeTooltip')}
+                    >
+                        🌱 {t('supportMe')}
+                    </button>
+                    <span className="text-stone-300">|</span>
+                    <button
+                        onClick={() => setShowFeedbackModal(true)}
+                        className="text-sm text-stone-500 hover:text-slate-600 transition-colors flex items-center gap-1.5"
+                        title={t('feedback')}
+                    >
+                        <EnvelopeIcon className="h-4 w-4" />
+                        <span>{t('feedback')}</span>
+                    </button>
+                </div>
             </div>
+
+            {/* Modal for AI Logs */}
+            {showLogs && <LogsModal />}
+
+            {/* Modal for supporting the creator */}
+            {showSupportModal && <SupportModal />}
+
+            {/* Modal for feedback */}
+            {showFeedbackModal && <FeedbackModal />}
             
              {/* Modal for displaying artwork information */}
             {showArtworkInfo && <ArtworkInfoModal />}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../AppContext';
-import { SearchIcon, ImageIcon, RefreshIcon, SparklesIcon, InfoIcon, BookmarkIcon, UploadIcon, BanIcon } from './Icons';
+import { SearchIcon, ImageIcon, RefreshIcon, SparklesIcon, InfoIcon, BookmarkIcon, UploadIcon, BanIcon } from './icons';
 import ActionButton from './ActionButton';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -15,6 +15,7 @@ const ArtworkDisplay: React.FC = () => {
         isCurrentArtworkBookmarked,
         artSources,
         selectedArtSource,
+        loadedBookmarkDate,
         setShowArtworkInfo,
         setIsArtworkZoomed,
         handleFetchArt,
@@ -25,6 +26,16 @@ const ArtworkDisplay: React.FC = () => {
     } = useAppContext();
 
     const [isSourceSelectorOpen, setIsSourceSelectorOpen] = useState(false);
+
+    const formatDate = (isoString: string | undefined) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
 
     return (
         <div className="md:flex-[0_0_50%] flex flex-col items-center gap-4">
@@ -81,9 +92,15 @@ const ArtworkDisplay: React.FC = () => {
                 )}
             </div>
 
+            {loadedBookmarkDate && (
+                <p className="text-xs text-stone-500 italic animate-fadeIn">
+                    {t('bookmarkedOnDate', { date: formatDate(loadedBookmarkDate) })}
+                </p>
+            )}
+
             {/* Action Buttons */}
              {!isArtlessMode && (
-                <div className="w-full flex items-center justify-center gap-3 mt-4">
+                <div className="w-full flex items-center justify-center gap-3">
                     {/* Source Button */}
                     <button
                         onClick={() => setIsSourceSelectorOpen(true)}

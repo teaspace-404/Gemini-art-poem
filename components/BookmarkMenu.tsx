@@ -1,6 +1,6 @@
 import React from 'react';
 import { useAppContext } from '../AppContext';
-import { BookmarkIcon, HeartIcon, SparklesButtonIcon } from './Icons';
+import { BookmarkIcon, HeartIcon, SparklesButtonIcon } from './icons';
 import type { LikedPoem } from '../types';
 
 const BookmarkMenu: React.FC = () => {
@@ -11,6 +11,19 @@ const BookmarkMenu: React.FC = () => {
         handleLoadLikedPoem: onLoadLikedPoem,
         t,
     } = useAppContext();
+
+    const formatDate = (isoString: string | undefined) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        return date.toLocaleDateString(undefined, {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+        });
+    };
+
+    const sortedBookmarks = [...bookmarks].sort((a, b) => new Date(b.dateAdded || 0).getTime() - new Date(a.dateAdded || 0).getTime());
+    const sortedLikedPoems = [...likedPoems].sort((a, b) => new Date(b.dateAdded || 0).getTime() - new Date(a.dateAdded || 0).getTime());
 
     return (
         <div 
@@ -33,12 +46,12 @@ const BookmarkMenu: React.FC = () => {
                     </h3>
                 </div>
                 <div className="p-2">
-                    {bookmarks.length > 0 ? (
+                    {sortedBookmarks.length > 0 ? (
                         <div className="grid grid-cols-3 gap-2">
-                            {bookmarks.map(bookmark => (
+                            {sortedBookmarks.map(bookmark => (
                                 <button 
                                     key={bookmark.id}
-                                    onClick={() => onLoadBookmark(bookmark.id)}
+                                    onClick={() => onLoadBookmark(bookmark.id, bookmark.source, bookmark.dateAdded)}
                                     className="group relative aspect-square bg-stone-200 rounded-md overflow-hidden focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500"
                                     title={t('loadArtworkTitle', { title: bookmark.title })}
                                     role="menuitem"
@@ -50,9 +63,12 @@ const BookmarkMenu: React.FC = () => {
                                         loading="lazy"
                                     />
                                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
-                                    <p className="absolute bottom-0 left-0 right-0 p-1 text-[10px] font-semibold text-white truncate text-center">
-                                        {bookmark.title}
-                                    </p>
+                                    <div className="absolute bottom-0 left-0 right-0 p-1 text-center">
+                                         <p className="text-[10px] font-semibold text-white truncate">
+                                            {bookmark.title}
+                                        </p>
+                                        <p className="text-[9px] text-white/80">{formatDate(bookmark.dateAdded)}</p>
+                                    </div>
                                 </button>
                             ))}
                         </div>
@@ -72,8 +88,8 @@ const BookmarkMenu: React.FC = () => {
                     </h3>
                 </div>
                 <div className="p-2 space-y-2">
-                    {likedPoems.length > 0 ? (
-                       likedPoems.map(likedPoem => {
+                    {sortedLikedPoems.length > 0 ? (
+                       sortedLikedPoems.map(likedPoem => {
                             const poemPreview = likedPoem.poem.split('\n')[0].split(' ').slice(0, 2).join(' ');
                             return (
                                 <button
@@ -97,6 +113,7 @@ const BookmarkMenu: React.FC = () => {
                                     <div className="overflow-hidden">
                                         <p className="text-sm font-semibold text-stone-700 truncate">{likedPoem.artworkTitle}</p>
                                         <p className="text-xs text-stone-500 font-serif italic truncate">"{poemPreview}..."</p>
+                                        <p className="text-[10px] text-stone-400 mt-1">{formatDate(likedPoem.dateAdded)}</p>
                                     </div>
                                 </button>
                             );

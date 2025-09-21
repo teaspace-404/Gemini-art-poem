@@ -17,6 +17,8 @@ export interface Artwork {
     imageId: string; // Source-specific image ID
     imageUrl: string; // Full URL for the main image
     thumbnailUrl: string; // Full URL for the thumbnail
+    date?: string; // For V&A production date
+    place?: string; // For V&A production place
 }
 
 // Interface for a bookmarked artwork
@@ -26,6 +28,7 @@ export interface Bookmark {
     imageId: string;
     source: string; // Need to know which service to call to reload
     thumbnailUrl: string;
+    dateAdded: string;
 }
 
 // Interface for a liked poem, linking a poem to its artwork
@@ -37,6 +40,8 @@ export interface LikedPoem {
     poem: string;
     source: string; // e.g., 'The Art Institute of Chicago' or 'artless'
     thumbnailUrl: string;
+    dateAdded: string;
+    userInputs: string[];
 }
 
 // Interface for different art sources/museums

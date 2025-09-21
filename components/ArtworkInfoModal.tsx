@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CloseIcon, CopyIcon } from './Icons';
+import { CloseIcon, CopyIcon } from './icons';
 import { useAppContext } from '../AppContext';
 
 const ArtworkInfoModal: React.FC = () => {
@@ -16,7 +16,9 @@ const ArtworkInfoModal: React.FC = () => {
             `#Title\n${info.title}`,
             `#Artist\n${info.artist || t('unknownArtist')}`,
             `#Medium\n${info.medium || t('notAvailable')}`,
-            `#Credit\n${info.credit || t('notAvailable')}`,
+            info.source === t('sourceVA')
+                ? `#${t('accessionNumber')}\n${info.credit || t('notAvailable')}`
+                : `#${t('creditLine')}\n${info.credit || t('notAvailable')}`,
             `#Source\n${t('poemgramCredit', { sourceName: info.source })}`
         ].join('\n\n');
 
@@ -79,10 +81,34 @@ const ArtworkInfoModal: React.FC = () => {
                         <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('medium')}</h3>
                         <p>{info.medium || t('notAvailable')}</p>
                     </div>
-                    <div>
-                        <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('creditLine')}</h3>
-                        <p className="text-sm text-stone-500">{info.credit || t('notAvailable')}</p>
-                    </div>
+
+                    {/* Conditional Rendering Block based on Artwork Source */}
+                    {info.source === t('sourceVA') ? (
+                        <>
+                            {info.date && (
+                                <div>
+                                    <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('date')}</h3>
+                                    <p>{info.date}</p>
+                                </div>
+                            )}
+                            {info.place && (
+                                 <div>
+                                    <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('place')}</h3>
+                                    <p>{info.place}</p>
+                                </div>
+                            )}
+                            <div>
+                                <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('accessionNumber')}</h3>
+                                <p className="text-sm text-stone-500">{info.credit || t('notAvailable')}</p>
+                            </div>
+                        </>
+                    ) : (
+                         <div>
+                            <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('creditLine')}</h3>
+                            <p className="text-sm text-stone-500">{info.credit || t('notAvailable')}</p>
+                        </div>
+                    )}
+                    
                      <div>
                         <h3 className="font-semibold text-sm text-slate-600 uppercase tracking-wider">{t('source')}</h3>
                         <p className="text-sm text-stone-500">{t('sourceProvidedBy', { sourceName: info.source })}</p>
