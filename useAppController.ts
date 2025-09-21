@@ -2,42 +2,12 @@ import { useState, useCallback, useEffect, useRef } from 'react';
 import { GoogleGenAI, HarmCategory, HarmBlockThreshold } from '@google/genai';
 import { trackEvent } from './components/analytics';
 import { translations } from './translations';
+import { artService } from '../services/artService';
+import type { Artwork, Bookmark, LikedPoem, LogEntry, ArtSource } from '../types';
+
 
 // Add a declaration for html2canvas since it's loaded from a script tag
 declare const html2canvas: any;
-
-// Interface for logging AI interactions
-export interface LogEntry {
-    prompt: string;
-    response: string;
-}
-
-// Interface for artwork metadata
-export interface ArtworkInfo {
-    id: number;
-    title: string;
-    artist: string;
-    medium: string;
-    credit: string;
-    source: "The Art Institute of Chicago";
-    image_id: string;
-}
-
-// Interface for a bookmarked artwork
-export interface Bookmark {
-    id: number;
-    title: string;
-    image_id: string;
-}
-
-// Interface for a liked poem, linking a poem to its artwork
-export interface LikedPoem {
-    id: number; // Unique ID for the liked instance, e.g., timestamp
-    artworkId: number;
-    artworkTitle: string;
-    artworkImageId: string;
-    poem: string;
-}
 
 export const useAppController = () => {
     // Core state for the application's data
@@ -46,7 +16,7 @@ export const useAppController = () => {
     const [poem, setPoem] = useState<string | null>(null);
     const [editablePoem, setEditablePoem] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
-    const [artworkInfo, setArtworkInfo] = useState<ArtworkInfo | null>(null);
+    const [artworkInfo, setArtworkInfo] = useState<Artwork | null>(null);
     
     // UI State to manage visibility of modals and other components
     const [showArtworkInfo, setShowArtworkInfo] = useState<boolean>(false);
@@ -97,6 +67,26 @@ export const useAppController = () => {
         { code: 'en' as const, name: 'EN' },
         { code: 'cn' as const, name: '中文' },
     ];
+
+    // Translation function (t)
+    const t = useCallback((key: keyof typeof translations.en, replacements?: Record<string, string | number>) => {
+        let text = translations[language]?.[key] || translations.en[key];
+        if (replacements) {
+            Object.entries(replacements).forEach(([placeholder, value]) => {
+                text = text.replace(`{${placeholder}}`, String(value));
+            });
+        }
+        return text;
+    }, [language]);
+
+    // State for art sources - must be initialized after `t`
+     const [artSources] = useState<ArtSource[]>([
+        { id: 'aic', name: t('sourceAIC'), initials: 'AIC', enabled: true },
+        { id: 'va', name: t('sourceVA'), initials: 'VA', enabled: false },
+        { id: 'bm', name: t('sourceBM'), initials: 'BM', enabled: false },
+    ]);
+    const [selectedArtSource, setSelectedArtSource] = useState<ArtSource>(artSources[0]);
+
 
     // Load saved data from localStorage on initial app load.
     useEffect(() => {
@@ -154,21 +144,8 @@ export const useAppController = () => {
         }
     }, [editablePoem, artworkInfo, likedPoems]);
 
-
-    // Translation function (t)
-    const t = useCallback((key: keyof typeof translations.en, replacements?: Record<string, string | number>) => {
-        let text = translations[language]?.[key] || translations.en[key];
-        if (replacements) {
-            Object.entries(replacements).forEach(([placeholder, value]) => {
-                text = text.replace(`{${placeholder}}`, String(value));
-            });
-        }
-        return text;
-    }, [language]);
-
     // Effect to cycle through loading messages while waiting for keywords.
     useEffect(() => {
-        // FIX: Corrected the type for the setInterval return value to be browser-compatible.
         let interval: ReturnType<typeof setInterval> | null = null;
         const isLoadingKeywords = userWantsToGenerate && !isKeywordsReady && !isArtlessMode;
 
@@ -181,14 +158,11 @@ export const useAppController = () => {
                 setLoadingMessage(messages[messageIndex]);
             }, 1500);
         }
-
-        // Cleanup function to clear the interval when the component unmounts or loading stops.
         return () => {
             if (interval) clearInterval(interval);
         };
     }, [userWantsToGenerate, isKeywordsReady, isArtlessMode, t]);
     
-    // Handler to set language
     const handleSetLanguage = useCallback((lang: 'en' | 'cn') => {
         if (lang !== language) {
             setLanguage(lang);
@@ -196,16 +170,19 @@ export const useAppController = () => {
         }
     }, [language]);
 
-    // This function runs in the background to fetch keywords from Gemini for the current artwork.
+    const handleSetArtSource = useCallback((source: ArtSource) => {
+        if (source.enabled) {
+            setSelectedArtSource(source);
+            trackEvent('art_source_changed', { sourceId: source.id, sourceName: source.name });
+        }
+    }, []);
+
     const generateKeywords = useCallback(async (imageDataUrl: string, requestId: number) => {
         if (!process.env.API_KEY) {
             if (requestId === requestRef.current) setError("Gemini API key is not configured.");
             return;
         }
-
-        // This state is for the local spinner inside the PoemEditor
         setIsGeneratingKeywords(true);
-
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
             const base64Data = imageDataUrl.split(',')[1];
@@ -218,23 +195,18 @@ export const useAppController = () => {
                 contents: { parts: [imagePart, textPart] },
             });
             
-            // CRITICAL: Check if this is still the active request before updating state.
             if (requestId === requestRef.current) {
                 const keywordString = response.text.trim();
                 setKeywordGenerationLog({ prompt: textPart.text, response: keywordString });
-                // Robustly split the keywords, handling commas, asterisks, or newlines as delimiters.
                 const keywordsArray = keywordString.replace(/[\*\n]/g, ',').split(',').map(k => k.trim()).filter(Boolean);
                 setKeywords(keywordsArray);
-                setIsKeywordsReady(true); // Signal that keywords are loaded and ready.
-            } else {
-                console.log("Stale keyword request ignored.");
+                setIsKeywordsReady(true);
             }
         } catch (err) {
-            // Only show an error if it pertains to the current artwork request.
             if (requestId === requestRef.current) {
                 console.error(err);
                 setError("Failed to generate keywords. You can still write a poem without them.");
-                setIsKeywordsReady(true); // Allow user to proceed even if keyword generation fails.
+                setIsKeywordsReady(true);
             }
         } finally {
             if (requestId === requestRef.current) {
@@ -243,15 +215,12 @@ export const useAppController = () => {
         }
     }, [t]);
 
-    // This function sends the artwork and the user-crafted poem themes to the Gemini API to generate the final poem.
     const generatePoem = useCallback(async (isRestricted: boolean) => {
         if (requestCount >= MAX_REQUESTS) {
             setError("You have reached the maximum number of requests for this session.");
             return;
         }
-        if (isPoemGenerationCoolingDown) {
-            return; // Exit if in cooldown period
-        }
+        if (isPoemGenerationCoolingDown) return;
         if (!capturedImage && !isArtlessMode) {
             setError("No image available to generate a poem from.");
             return;
@@ -263,19 +232,14 @@ export const useAppController = () => {
         setError(null);
         setPoem(null);
 
-        // Set a timer to end the cooldown after 5 seconds
         setTimeout(() => setIsPoemGenerationCoolingDown(false), 5000);
 
         try {
             const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-            
-            // 1. Sanitize user inputs to remove potentially harmful characters.
             const sanitizedLines = poemLines.map(line => line.replace(/[<>{}[\]()]/g, ''));
 
             let promptText: string;
             let contents: any;
-
-            // 2. Harden the prompt with explicit instructions and guardrails.
             let basePrompt = t('poemPromptBase');
             
             if (isRestricted) {
@@ -304,8 +268,6 @@ export const useAppController = () => {
                 contents = { parts: [imagePart, textPart] };
             }
 
-
-             // 3. Configure robust safety settings for the API call.
             const safetySettings = [
                 { category: HarmCategory.HARM_CATEGORY_HARASSMENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
                 { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
@@ -318,7 +280,7 @@ export const useAppController = () => {
                 contents: contents,
                 config: {
                     safetySettings: safetySettings,
-                    maxOutputTokens: 100, // 4. Limit the output token count.
+                    maxOutputTokens: 100,
                     thinkingConfig: { thinkingBudget: 50 },
                 },
             });
@@ -327,11 +289,10 @@ export const useAppController = () => {
             setPoemGenerationLog({ prompt: promptText, response: poemText });
             setPoem(poemText);
 
-            // TRACKING: Log successful poem generation
             trackEvent('poem_generated', { 
                 artwork: artworkInfo,
                 isArtlessMode: isArtlessMode,
-                userPoemLines: sanitizedLines, // Log the sanitized lines
+                userPoemLines: sanitizedLines,
                 generatedPoem: poemText,
                 geminiPrompt: promptText,
                 isRestricted: isRestricted
@@ -340,7 +301,6 @@ export const useAppController = () => {
         } catch (err) {
             console.error(err);
             setError("Failed to generate poem. Please try again. The content may have been blocked by safety filters.");
-             // TRACKING: Log errors
             trackEvent('error', { context: 'generatePoem', message: (err as Error).message });
         } finally {
             setIsGeneratingPoem(false);
@@ -357,7 +317,6 @@ export const useAppController = () => {
         setPoem(finalPoem);
         setEditablePoem(finalPoem);
         
-        // Log the manual creation for transparency
         setPoemGenerationLog({
             prompt: "User created poem manually.",
             response: finalPoem
@@ -386,27 +345,14 @@ export const useAppController = () => {
         setIsArtlessMode(false);
     }
 
-     // Processes the artwork data and starts the image download and keyword generation.
-    const processArtwork = async (artworkData: any, requestId: number) => {
-        const imageUrl = `https://www.artic.edu/iiif/2/${artworkData.image_id}/full/843,/0/default.jpg`;
+    const processArtwork = async (artwork: Artwork, requestId: number) => {
         if(requestId !== requestRef.current) return;
 
-        const newArtworkInfo: ArtworkInfo = {
-            id: artworkData.id,
-            title: artworkData.title,
-            artist: artworkData.artist_display,
-            medium: artworkData.medium_display,
-            credit: artworkData.credit_line,
-            source: "The Art Institute of Chicago" as const,
-            image_id: artworkData.image_id
-        };
+        setArtworkImageUrl(artwork.imageUrl);
+        setArtworkInfo(artwork);
+        trackEvent('artwork_displayed', { artwork, imageUrl: artwork.imageUrl });
 
-        setArtworkImageUrl(imageUrl);
-        setArtworkInfo(newArtworkInfo);
-
-        trackEvent('artwork_displayed', { artwork: newArtworkInfo, imageUrl });
-
-        const imageResponse = await fetch(imageUrl);
+        const imageResponse = await fetch(artwork.imageUrl);
         if (!imageResponse.ok) throw new Error('Failed to fetch the artwork image.');
             
         const imageBlob = await imageResponse.blob();
@@ -420,23 +366,18 @@ export const useAppController = () => {
         reader.readAsDataURL(imageBlob);
     };
 
-    // Fetches a random artwork and kicks off the background keyword generation.
     const handleFetchArt = async () => {
+        if (selectedArtSource.id !== 'aic') {
+            setError(`The ${selectedArtSource.name} source is not yet available.`);
+            return;
+        }
         setIsFetchingArt(true);
         const currentRequestId = ++requestRef.current;
         resetForNewArtwork();
 
         try {
-            const response = await fetch('https://api.artic.edu/api/v1/artworks?fields=id,title,image_id,artist_display,medium_display,credit_line&limit=100');
-            if (!response.ok) throw new Error('Failed to fetch artwork list from the museum.');
-            
-            const data = await response.json();
-            const artworksWithImages = data.data.filter((art: any) => art.image_id);
-            if (artworksWithImages.length === 0) throw new Error('No artworks with images were found.');
-            
-            const randomArt = artworksWithImages[Math.floor(Math.random() * artworksWithImages.length)];
-            await processArtwork(randomArt, currentRequestId);
-
+            const artwork = await artService.fetchRandomArtwork();
+            await processArtwork(artwork, currentRequestId);
         } catch (err) {
             if (currentRequestId === requestRef.current) {
                 console.error(err);
@@ -451,21 +392,14 @@ export const useAppController = () => {
         }
     };
 
-    // Fetches a specific artwork by its ID, for loading bookmarks.
-    const handleFetchArtById = async (id: number) => {
+    const handleFetchArtById = async (id: string) => {
         setIsFetchingArt(true);
         const currentRequestId = ++requestRef.current;
         resetForNewArtwork();
         
         try {
-            const response = await fetch(`https://api.artic.edu/api/v1/artworks/${id}?fields=id,title,image_id,artist_display,medium_display,credit_line`);
-            if (!response.ok) throw new Error(`Failed to fetch artwork with ID ${id}.`);
-
-            const { data } = await response.json();
-            if (!data.image_id) throw new Error('The selected artwork does not have an image.');
-            
-            await processArtwork(data, currentRequestId);
-            
+            const artwork = await artService.fetchArtworkById(id);
+            await processArtwork(artwork, currentRequestId);
         } catch (err) {
              if (currentRequestId === requestRef.current) {
                 console.error(err);
@@ -480,13 +414,21 @@ export const useAppController = () => {
         }
     };
 
-     // Loads a liked poem by fetching its artwork and then populating the poem.
     const handleLoadLikedPoem = (likedPoem: LikedPoem) => {
-        setPoemToLoad(likedPoem.poem);
-        handleFetchArtById(likedPoem.artworkId);
+        if (likedPoem.source === 'artless') {
+            resetForNewArtwork();
+            setIsArtlessMode(true);
+            setUserWantsToGenerate(true);
+            setIsKeywordsReady(true);
+            setKeywords([]);
+            setPoem(likedPoem.poem);
+            setEditablePoem(likedPoem.poem);
+        } else {
+            setPoemToLoad(likedPoem.poem);
+            handleFetchArtById(likedPoem.artworkId);
+        }
     };
     
-    // Allows user to start the poem creation process with AI keywords.
     const handleInspireMe = () => {
         if (!capturedImage) return;
         setUserWantsToGenerate(true);
@@ -494,15 +436,13 @@ export const useAppController = () => {
         generateKeywords(capturedImage, currentRequestId);
     };
 
-    // Allows user to start writing immediately without AI keywords.
     const handleStartWritingDirectly = () => {
         setUserWantsToGenerate(true);
-        setIsKeywordsReady(true); // Bypass keyword loading
-        setKeywords([]); // No keywords for the editor
+        setIsKeywordsReady(true);
+        setKeywords([]);
         trackEvent('start_writing_directly', { artwork: artworkInfo });
     };
 
-     // Allows a user in the editor to request keywords if they started without them.
     const handleRequestInspirationFromEditor = useCallback(() => {
         if (!capturedImage) return;
         trackEvent('request_inspiration_from_editor', { artwork: artworkInfo });
@@ -510,7 +450,6 @@ export const useAppController = () => {
         generateKeywords(capturedImage, currentRequestId);
     }, [capturedImage, artworkInfo, generateKeywords]);
 
-    // Resets the state to fetch a new piece of art.
     const handleChangeArtwork = () => {
         trackEvent('artwork_changed', { currentArtwork: artworkInfo });
         setIsChangeArtworkDisabled(true);
@@ -520,7 +459,6 @@ export const useAppController = () => {
         }, 2000);
     };
 
-    // Re-runs the keyword generation for the same artwork or clears the editor for artless mode.
     const handleWriteAnother = useCallback(() => {
         if (!capturedImage && !isArtlessMode) return;
 
@@ -534,17 +472,14 @@ export const useAppController = () => {
         }
         
         trackEvent('write_another_poem', { artwork: artworkInfo });
-        
         setPoem(null);
         setEditablePoem(null);
         setPoemLines(['', '', '']);
         setPoemGenerationLog(null);
-        
         setKeywords([]);
         setIsKeywordsReady(false);
         setKeywordGenerationLog(null);
         setIsLiked(false); 
-
         setUserWantsToGenerate(true);
 
         if (capturedImage) {
@@ -554,20 +489,22 @@ export const useAppController = () => {
     }, [capturedImage, artworkInfo, generateKeywords, isArtlessMode]);
     
 
-     // Handles the user liking or unliking the generated poem.
      const handleLike = useCallback(() => {
-        if ((!artworkInfo && !isArtlessMode) || !editablePoem) return;
+        if (!editablePoem) return;
 
         if (isLiked) {
-            setLikedPoems(prev => prev.filter(p => !((p.artworkId === artworkInfo?.id) && p.poem === editablePoem)));
+            const artworkId = isArtlessMode ? 'artless' : artworkInfo?.id;
+            setLikedPoems(prev => prev.filter(p => !(p.artworkId === artworkId && p.poem === editablePoem)));
             trackEvent('poem_unliked', { artwork: artworkInfo, finalPoem: editablePoem, isArtlessMode });
         } else {
             const newLikedPoem: LikedPoem = {
                 id: Date.now(),
-                artworkId: artworkInfo?.id ?? 0,
+                artworkId: artworkInfo?.id ?? 'artless',
                 artworkTitle: artworkInfo?.title ?? 'Artless Poem',
-                artworkImageId: artworkInfo?.image_id ?? '',
+                artworkImageId: artworkInfo?.imageId ?? '',
                 poem: editablePoem,
+                source: artworkInfo?.source ?? 'artless',
+                thumbnailUrl: artworkInfo?.thumbnailUrl ?? '',
             };
             setLikedPoems(prev => [...prev, newLikedPoem]);
             trackEvent('poem_liked', { artwork: artworkInfo, finalPoem: editablePoem, isArtlessMode });
@@ -579,8 +516,7 @@ export const useAppController = () => {
     }, [isLiked, artworkInfo, editablePoem, isArtlessMode]);
 
 
-     // Adds or removes the current artwork from the bookmarks list.
-    const handleToggleBookmark = useCallback(() => {
+     const handleToggleBookmark = useCallback(() => {
         if (!artworkInfo) return;
 
         setBookmarks(prevBookmarks => {
@@ -593,7 +529,9 @@ export const useAppController = () => {
                 const newBookmark: Bookmark = {
                     id: artworkInfo.id,
                     title: artworkInfo.title,
-                    image_id: artworkInfo.image_id,
+                    imageId: artworkInfo.imageId,
+                    source: artworkInfo.source,
+                    thumbnailUrl: artworkInfo.thumbnailUrl,
                 };
                 return [...prevBookmarks, newBookmark];
             }
@@ -601,7 +539,6 @@ export const useAppController = () => {
     }, [artworkInfo]);
 
 
-    // Exports the final artwork and poem as a single PNG image.
     const handleExport = () => {
         if (!editablePoem) {
             setError("Cannot export without a poem.");
@@ -678,7 +615,6 @@ export const useAppController = () => {
         trackEvent('start_artless_mode', {});
     };
 
-    // Compiles all log data into a single JSON object and triggers a download.
     const handleDownloadLog = () => {
         const logData = {
             generatedOn: new Date().toISOString(),
@@ -704,9 +640,7 @@ export const useAppController = () => {
     
     const isCurrentArtworkBookmarked = !!artworkInfo && bookmarks.some(b => b.id === artworkInfo.id);
 
-
     return {
-        // State
         capturedImage,
         artworkImageUrl,
         poem,
@@ -739,8 +673,8 @@ export const useAppController = () => {
         isCurrentArtworkBookmarked,
         language,
         supportedLanguages,
-
-        // Setters / Handlers
+        artSources,
+        selectedArtSource,
         setEditablePoem,
         setShowArtworkInfo,
         setIsArtworkZoomed,
@@ -763,6 +697,7 @@ export const useAppController = () => {
         handleFinalizePoemManually,
         handleRequestInspirationFromEditor,
         handleSetLanguage,
+        handleSetArtSource,
         t
     };
 }

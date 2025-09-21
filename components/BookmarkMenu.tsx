@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAppContext } from '../AppContext';
-import { BookmarkIcon, HeartIcon } from './Icons';
-import type { LikedPoem } from '../useAppController';
+import { BookmarkIcon, HeartIcon, SparklesButtonIcon } from './Icons';
+import type { LikedPoem } from '../types';
 
 const BookmarkMenu: React.FC = () => {
     const {
@@ -11,9 +11,6 @@ const BookmarkMenu: React.FC = () => {
         handleLoadLikedPoem: onLoadLikedPoem,
         t,
     } = useAppContext();
-
-    // Construct the thumbnail URL for a given image ID.
-    const getThumbnailUrl = (imageId: string) => `https://www.artic.edu/iiif/2/${imageId}/full/200,/0/default.jpg`;
 
     return (
         <div 
@@ -47,7 +44,7 @@ const BookmarkMenu: React.FC = () => {
                                     role="menuitem"
                                 >
                                     <img 
-                                        src={getThumbnailUrl(bookmark.image_id)} 
+                                        src={bookmark.thumbnailUrl} 
                                         alt={bookmark.title}
                                         className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                         loading="lazy"
@@ -85,12 +82,18 @@ const BookmarkMenu: React.FC = () => {
                                     className="w-full flex items-center gap-3 text-left p-2 rounded-md hover:bg-stone-200 transition-colors focus:outline-none focus:bg-stone-200"
                                     role="menuitem"
                                 >
-                                    <img
-                                        src={getThumbnailUrl(likedPoem.artworkImageId)}
-                                        alt={likedPoem.artworkTitle}
-                                        className="w-12 h-12 object-cover rounded flex-shrink-0 bg-stone-200"
-                                        loading="lazy"
-                                    />
+                                    {likedPoem.thumbnailUrl ? (
+                                        <img
+                                            src={likedPoem.thumbnailUrl}
+                                            alt={likedPoem.artworkTitle}
+                                            className="w-12 h-12 object-cover rounded flex-shrink-0 bg-stone-200"
+                                            loading="lazy"
+                                        />
+                                    ) : (
+                                        <div className="w-12 h-12 rounded flex-shrink-0 bg-stone-200 flex items-center justify-center">
+                                            <SparklesButtonIcon className="h-6 w-6 text-stone-400" />
+                                        </div>
+                                    )}
                                     <div className="overflow-hidden">
                                         <p className="text-sm font-semibold text-stone-700 truncate">{likedPoem.artworkTitle}</p>
                                         <p className="text-xs text-stone-500 font-serif italic truncate">"{poemPreview}..."</p>

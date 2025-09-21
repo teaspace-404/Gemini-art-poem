@@ -37,6 +37,13 @@ type TranslationKeys = {
     bookmarkAria: string;
     removeBookmarkAria: string;
 
+    // ArtworkDisplay.tsx
+    upcomingFeature: string;
+    selectSource: string;
+    sourceAIC: string; 
+    sourceVA: string;
+    sourceBM: string;
+
     // PoemEditor.tsx
     craftTheme: string;
     craftPlaceholder: string;
@@ -120,6 +127,11 @@ export const translations: { [key: string]: TranslationKeys } = {
     artworkInfoAria: 'Show artwork information',
     bookmarkAria: 'Bookmark artwork',
     removeBookmarkAria: 'Remove bookmark',
+    upcomingFeature: 'Upcoming Feature',
+    selectSource: 'Select a Source',
+    sourceAIC: 'Art Institute of Chicago',
+    sourceVA: 'Victoria and Albert Museum',
+    sourceBM: 'British Museum',
     craftTheme: "Craft Your Poem's Theme",
     craftPlaceholder: 'Craft your ideas here...',
     activateLinePlaceholder: 'Tap here to make Line {lineNumber} active...',
@@ -161,18 +173,18 @@ export const translations: { [key: string]: TranslationKeys } = {
   cn: {
     collections: '收藏',
     appTitle: '艺术之诗',
-    appSubtitle: '寻找艺术灵感，引导诗句。',
-    magicPlaceholder: '奇迹可能在这里发生。',
-    artlessMode: '无画模式',
-    artlessDescription: '从零开始创作一首诗。',
+    appSubtitle: '寻觅艺术灵感，指引诗句发生。',
+    magicPlaceholder: '好事会发生。',
+    artlessMode: '无画也能创作',
+    artlessDescription: '从零开始创作诗篇。',
     fetchArt: '为我取画',
-    changeArtTitle: '寻找一幅新艺术品',
+    changeArtTitle: '寻找新艺术品',
     changeArt: '换一幅',
     inspirationAwaits: '灵感在等待',
     writeFromScratch: '从零开始',
-    finalPoemTitle: '你的最终诗篇',
-    finalPoemAriaLabel: '最终可编辑的诗',
-    likedFeedback: '已喜欢！',
+    finalPoemTitle: '你的最终诗稿',
+    finalPoemAriaLabel: '最终诗稿（仍可编辑）',
+    likedFeedback: '我喜欢！',
     exportPoemgram: '导出诗图',
     exportPoemgramTitle: '导出为 PNG',
     likeTitle: '喜欢',
@@ -183,7 +195,7 @@ export const translations: { [key: string]: TranslationKeys } = {
     showLogs: '显示 AI 日志',
     hideLogs: '隐藏 AI 日志',
     logTitle: 'AI 交互日志',
-    logDescription: '此日志显示发送到 AI 的提示和从 AI 收到的响应。',
+    logDescription: '此日志显示发送到 Gemini AI 的提示和从 Gemini AI 收到的响应。',
     downloadLogTitle: '下载日志',
     logEmpty: '获取艺术品或创作诗歌后，AI 交互将在此处记录。',
     keywordGeneration: '关键词生成',
@@ -193,10 +205,15 @@ export const translations: { [key: string]: TranslationKeys } = {
     artworkInfoAria: '显示艺术品信息',
     bookmarkAria: '收藏艺术品',
     removeBookmarkAria: '取消收藏艺术品',
+    upcomingFeature: '即将推出',
+    selectSource: '选择来源',
+    sourceAIC: '芝加哥艺术博物馆',
+    sourceVA: '维多利亚和阿尔伯特博物馆',
+    sourceBM: '大英博物馆',
     craftTheme: '构思你的诗歌主题',
     craftPlaceholder: '在这里构思你的想法...',
     activateLinePlaceholder: '点击此处激活第 {lineNumber} 行...',
-    stuckPrompt: '没有头绪？让 AI 为你提供一些想法。',
+    stuckPrompt: '缺少头绪？让 AI 为你提供一些想法。',
     getAIInspiration: '获取 AI 灵感',
     generating: '生成中...',
     restrictionMode: '限制模式',
@@ -205,7 +222,7 @@ export const translations: { [key: string]: TranslationKeys } = {
     pleaseWait: '请稍候...',
     createWithGemini: '使用 Gemini 创作',
     useMyWords: '使用我自己的话',
-    sessionLimit: '您已达到本次会话的上限。',
+    sessionLimit: '您已达到本次会话的上限，请稍后刷新页面，再次尝试。',
     validationError: '请避免使用像“{keyword}”这样的指令性词语。',
     artist: '艺术家',
     unknownArtist: '未知艺术家',
