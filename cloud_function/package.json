@@ -1,0 +1,13 @@
+{
+  "name": "poem-for-art-analytics-logger",
+  "version": "1.0.0",
+  "description": "A Google Cloud Function to log analytics events from the Poem for Art application.",
+  "main": "index.js",
+  "scripts": {
+    "start": "functions-framework --target=helloHttp"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.0.0",
+    "@google-cloud/firestore": "^7.0.0"
+  }
+}
