@@ -168,7 +168,8 @@ export const useAppController = () => {
 
     // Effect to cycle through loading messages while waiting for keywords.
     useEffect(() => {
-        let interval: NodeJS.Timeout | null = null;
+        // FIX: Corrected the type for the setInterval return value to be browser-compatible.
+        let interval: ReturnType<typeof setInterval> | null = null;
         const isLoadingKeywords = userWantsToGenerate && !isKeywordsReady && !isArtlessMode;
 
         if (isLoadingKeywords) {
