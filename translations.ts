@@ -148,7 +148,7 @@ export const translations: { [key: string]: TranslationKeys } = {
     artlessDescription: 'Craft a poem from scratch.',
     fetchArt: 'Fetch me Art',
     changeArtTitle: 'Find a new piece of art',
-    changeArt: 'Change One',
+    changeArt: 'Change It',
     inspirationAwaits: 'Inspiration awaits',
     finalPoemTitle: 'Your Final Poem',
     finalPoemAriaLabel: 'Final editable poem',
