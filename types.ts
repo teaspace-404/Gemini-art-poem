@@ -6,6 +6,15 @@ export interface LogEntry {
     response: string;
 }
 
+// Interface for the new dynamic activity log
+export type ActivityLogEntry = {
+    timestamp: string;
+    type: 'user_action' | 'ai_interaction' | 'system_event';
+    message: string;
+    data?: LogEntry;
+};
+
+
 // Standardized interface for artwork data from any source
 export interface Artwork {
     id: string; // Using string for broader compatibility

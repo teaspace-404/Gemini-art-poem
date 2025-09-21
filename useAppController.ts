@@ -1,11 +1,11 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { trackEvent } from './components/analytics';
 import { useLocalizationHandler } from './hooks/useLocalizationHandler';
 import { useArtHandler } from './hooks/useArtHandler';
 import { usePoemHandler } from './hooks/usePoemHandler';
 import { usePersistenceHandler } from './hooks/usePersistenceHandler';
 import { useUIHandler } from './hooks/useUIHandler';
-import type { LikedPoem, Artwork } from './types';
+import type { LikedPoem, Artwork, ActivityLogEntry, ArtSource } from './types';
 
 declare const html2canvas: any;
 
@@ -97,6 +97,14 @@ export const useAppController = () => {
     const [selectedLikedPoem, setSelectedLikedPoem] = useState<LikedPoem | null>(null);
     const [likedPoemToRecreate, setLikedPoemToRecreate] = useState<LikedPoem | null>(null);
 
+    // NEW: Centralized Activity Log State
+    const [activityLog, setActivityLog] = useState<ActivityLogEntry[]>([]);
+    const logActivity = useCallback((type: ActivityLogEntry['type'], message: string, data?: any) => {
+        setActivityLog(prev => [...prev, { type, message, data, timestamp: new Date().toISOString() }]);
+    }, []);
+
+    const prevPoemLinesLength = useRef(poemLines.length);
+
 
     // === EFFECTS to wire hooks together ===
     
@@ -142,6 +150,33 @@ export const useAppController = () => {
         }
     }, [artworkInfo, isArtlessMode, isFetchingArt]);
 
+    // NEW: Effects for populating the dynamic activity log
+    useEffect(() => {
+        if (activityLog.length === 0) {
+            logActivity('system_event', 'Session started.');
+        }
+
+        if (poemLines.length > prevPoemLinesLength.current) {
+            logActivity('user_action', 'User added a new line.');
+        } else if (poemLines.length < prevPoemLinesLength.current) {
+            logActivity('user_action', 'User removed one line.');
+        }
+        prevPoemLinesLength.current = poemLines.length;
+    }, [poemLines.length, logActivity, activityLog.length]);
+    
+    useEffect(() => {
+        if (keywordGenerationLog) {
+            logActivity('ai_interaction', t('keywordGeneration'), keywordGenerationLog);
+        }
+    }, [keywordGenerationLog, logActivity, t]);
+
+    useEffect(() => {
+        if (poemGenerationLog) {
+            logActivity('ai_interaction', t('poemGeneration'), poemGenerationLog);
+        }
+    }, [poemGenerationLog, logActivity, t]);
+
+
 
     // === ORCHESTRATION & PUBLIC HANDLERS ===
     
@@ -159,11 +194,13 @@ export const useAppController = () => {
     }, [resetArtState, resetPoemState]);
 
     const handleFetchArt = async () => {
+        logActivity('user_action', 'User fetched new art.');
         resetForNewArtwork();
         await fetchArt();
     };
     
     const handleFetchArtById = async (id: string, sourceName: string, dateAdded?: string) => {
+        logActivity('user_action', `User loaded bookmarked art from ${sourceName}.`);
         resetForNewArtwork();
 
         if (dateAdded) {
@@ -250,6 +287,7 @@ export const useAppController = () => {
     };
 
     const handleChangeArtwork = () => {
+        logActivity('user_action', 'User changed artwork.');
         trackEvent('artwork_changed', { currentArtwork: artworkInfo });
         setIsChangeArtworkDisabled(true);
         
@@ -297,16 +335,31 @@ export const useAppController = () => {
         }
     };
 
+    const handleSetArtSourceWrapper = useCallback((source: ArtSource) => {
+        if (source.id !== selectedArtSource.id) {
+            logActivity('user_action', `User changed source to ${source.name}.`);
+        }
+        handleSetArtSource(source);
+    }, [handleSetArtSource, logActivity, selectedArtSource.id]);
+
+
     const handleCopyLog = useCallback(async (): Promise<boolean> => {
         const logData = {
             generatedOn: new Date().toISOString(),
             artwork: artworkInfo,
             isArtlessMode: isArtlessMode,
-            keywordGeneration: keywordGenerationLog,
-            poemGeneration: poemGenerationLog,
-            userPrompts: poemLines,
             finalPoem: editablePoem,
+            log: activityLog.map(entry => {
+                const { type, timestamp, message, data } = entry;
+                let formattedEntry: any = { timestamp, type, message };
+                if (data) {
+                    formattedEntry.prompt = data.prompt;
+                    formattedEntry.response = data.response;
+                }
+                return formattedEntry;
+            }),
         };
+
         const logContent = JSON.stringify(logData, null, 2);
         try {
             await navigator.clipboard.writeText(logContent);
@@ -316,7 +369,7 @@ export const useAppController = () => {
             console.error('Failed to copy logs:', err);
             return false;
         }
-    }, [artworkInfo, isArtlessMode, keywordGenerationLog, poemGenerationLog, poemLines, editablePoem]);
+    }, [artworkInfo, isArtlessMode, editablePoem, activityLog]);
 
     const generatePoemgramCanvas = (): Promise<HTMLCanvasElement> => {
         return new Promise((resolve, reject) => {
@@ -458,9 +511,10 @@ export const useAppController = () => {
     }, [editablePoem, artworkInfo, isArtlessMode, t]);
 
     const handleClearAllThemes = useCallback(() => {
+        logActivity('user_action', 'User cleared all themes.');
         setPoemLines(['', '', '']);
         trackEvent('themes_cleared', {});
-    }, [setPoemLines]);
+    }, [setPoemLines, logActivity]);
 
 
     return {
@@ -468,7 +522,7 @@ export const useAppController = () => {
         capturedImage, artworkImageUrl, poem, editablePoem, error, artworkInfo, showArtworkInfo, isArtworkZoomed,
         keywords, poemLines, userWantsToGenerate, isKeywordsReady, isArtlessMode, isFetchingArt, isGeneratingPoem,
         isGeneratingKeywords, loadingMessage, isChangeArtworkDisabled, isPoemGenerationCoolingDown, requestCount,
-        MAX_REQUESTS, keywordGenerationLog, poemGenerationLog, showLogs, isLiked: isPoemLiked, showLikedFeedback, isLikeBouncing,
+        MAX_REQUESTS, activityLog, showLogs, isLiked: isPoemLiked, showLikedFeedback, isLikeBouncing,
         bookmarks, likedPoems, isCurrentArtworkBookmarked, language, supportedLanguages, artSources, selectedArtSource, loadedPoemDate,
         loadedBookmarkDate, showSupportModal, showFeedbackModal, isShareApiAvailable, isFlipping, lastFinalPoem,
         showLikedPoemOptionsModal, 
@@ -481,7 +535,7 @@ export const useAppController = () => {
         handleFetchArt, handleFetchArtById, handleLoadLikedPoem, handleInspireMe, 
         handleChangeArtwork, handleToggleBookmark, handleExport, handleStartArtlessMode, handleLike, 
         handleCopyLog, generatePoem: handleGeneratePoem, handleFinalizePoemManually,
-        handleRequestInspirationFromEditor, handleSetLanguage, handleSetArtSource,
+        handleRequestInspirationFromEditor, handleSetLanguage, handleSetArtSource: handleSetArtSourceWrapper,
         handleShareWIPPoem, handleFlipBackToEditor, handleShareFinalPoem, handleCopyFinalPoem,
         handleRecreatePoem, handleClearAllThemes, handleFlipToViewLastPoem,
         t

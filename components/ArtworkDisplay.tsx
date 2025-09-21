@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../AppContext';
-import { SearchIcon, ImageIcon, RefreshIcon, SparklesIcon, InfoIcon, BookmarkIcon, UploadIcon, BanIcon } from './icons';
+// FIX: The AdvancedSearchIcon is now exported from the './icons' barrel file. The import path has been updated for consistency.
+import { SearchIcon, ImageIcon, RefreshIcon, SparklesIcon, InfoIcon, BookmarkIcon, UploadIcon, BanIcon, AdvancedSearchIcon } from './icons';
 import ActionButton from './ActionButton';
 import LoadingSpinner from './LoadingSpinner';
 
@@ -99,13 +100,30 @@ const ArtworkDisplay: React.FC = () => {
             )}
 
             {/* Action Buttons */}
-             {!isArtlessMode && (
-                <div className="w-full flex items-center justify-center gap-3">
+            <div className="w-full flex items-center justify-between">
+                {/* Upload Button */}
+                <div className="relative group">
+                    <button
+                        disabled
+                        className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-stone-200 text-stone-400 rounded-full transition-all duration-300 shadow-md cursor-not-allowed"
+                    >
+                        <UploadIcon />
+                        <div className="absolute inset-0 flex items-center justify-center bg-stone-200/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <BanIcon className="h-8 w-8 text-stone-500" />
+                        </div>
+                    </button>
+                    <div role="tooltip" className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-stone-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 z-10">
+                        {t('upcomingFeature')}
+                    </div>
+                </div>
+
+                 {/* Center Group */}
+                <div className="flex items-center justify-center gap-3">
                     {/* Source Button */}
                     <button
                         onClick={() => setIsSourceSelectorOpen(true)}
                         title={t('selectSource')}
-                        className="h-12 w-12 flex-shrink-0 flex items-center justify-center font-bold text-sm bg-stone-200 text-stone-700 rounded-full transition-all duration-300 shadow-md transform hover:scale-105 active:scale-100"
+                        className="h-12 w-12 flex-shrink-0 flex items-center justify-center font-bold text-sm bg-stone-800 text-stone-100 rounded-full transition-all duration-300 shadow-md transform hover:scale-105 active:scale-100 hover:bg-stone-700"
                     >
                         {selectedArtSource.initials}
                     </button>
@@ -131,24 +149,24 @@ const ArtworkDisplay: React.FC = () => {
                             <span>{t('changeArt')}</span>
                         </ActionButton>
                     )}
+                </div>
 
-                    {/* Upload Button */}
-                    <div className="relative group">
-                        <button
-                            disabled
-                            className="h-12 w-12 flex-shrink-0 flex items-center justify-center bg-stone-200 text-stone-400 rounded-full transition-all duration-300 shadow-md cursor-not-allowed"
-                        >
-                            <UploadIcon />
-                            <div className="absolute inset-0 flex items-center justify-center bg-stone-200/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
-                                <BanIcon className="h-10 w-10 text-stone-500" />
-                            </div>
-                        </button>
-                        <div role="tooltip" className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-stone-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 z-10">
-                            {t('upcomingFeature')}
+                {/* Advanced Search Button */}
+                <div className="relative group">
+                    <button
+                        disabled
+                        className="h-10 w-10 flex-shrink-0 flex items-center justify-center bg-stone-200 text-stone-400 rounded-full transition-all duration-300 shadow-md cursor-not-allowed"
+                    >
+                        <AdvancedSearchIcon />
+                        <div className="absolute inset-0 flex items-center justify-center bg-stone-200/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <BanIcon className="h-8 w-8 text-stone-500" />
                         </div>
+                    </button>
+                    <div role="tooltip" className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-max px-2 py-1 bg-stone-800 text-white text-xs rounded-md shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-opacity duration-300 z-10">
+                        {t('advancedSearchTooltip')}
                     </div>
                 </div>
-            )}
+            </div>
 
             {/* Source Selector Modal */}
             {isSourceSelectorOpen && (

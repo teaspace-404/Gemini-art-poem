@@ -6,8 +6,7 @@ import ActionButton from './ActionButton';
 const LogsModal: React.FC = () => {
     const { 
         setShowLogs,
-        keywordGenerationLog,
-        poemGenerationLog,
+        activityLog,
         handleCopyLog,
         t 
     } = useAppContext();
@@ -24,7 +23,7 @@ const LogsModal: React.FC = () => {
         }
     };
 
-    const hasLogs = keywordGenerationLog || poemGenerationLog;
+    const hasLogs = activityLog && activityLog.length > 1; // Ignore the initial "Session started" message
 
     return (
         <div 
@@ -56,26 +55,26 @@ const LogsModal: React.FC = () => {
                     </div>
                 </div>
 
-                <div className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-4 text-xs text-stone-700 bg-stone-50 border border-stone-200 rounded-lg p-4">
+                <div className="flex-grow overflow-y-auto pr-2 -mr-2 space-y-3 text-xs text-stone-700 bg-stone-50 border border-stone-200 rounded-lg p-4 font-mono">
                     {!hasLogs ? (
                         <p className="text-stone-500 italic p-2">{t('logEmpty')}</p>
                     ) : (
-                        <>
-                            {keywordGenerationLog && (
-                                <div>
-                                    <p className="font-semibold text-slate-700">{t('keywordGeneration')}</p>
-                                    <p className="mt-1 p-2 bg-stone-200 rounded whitespace-pre-wrap"><strong>{t('prompt')}</strong> {keywordGenerationLog.prompt}</p>
-                                    <p className="mt-1 p-2 bg-stone-200 rounded whitespace-pre-wrap"><strong>{t('response')}</strong> {keywordGenerationLog.response}</p>
-                                </div>
-                            )}
-                            {poemGenerationLog && (
-                                <div>
-                                    <p className="font-semibold text-slate-700">{t('poemGeneration')}</p>
-                                    <p className="mt-1 p-2 bg-stone-200 rounded whitespace-pre-wrap"><strong>{t('prompt')}</strong> {poemGenerationLog.prompt}</p>
-                                    <p className="mt-1 p-2 bg-stone-200 rounded whitespace-pre-wrap"><strong>{t('response')}</strong> {poemGenerationLog.response}</p>
-                                </div>
-                            )}
-                        </>
+                         [...activityLog].reverse().map((entry, index) => (
+                            <div key={index}>
+                                {entry.type === 'ai_interaction' && entry.data ? (
+                                    <div className="p-2 bg-stone-100 rounded">
+                                        <p className="font-semibold text-slate-700 mb-1">{entry.message}</p>
+                                        <p className="mt-1 p-2 bg-stone-200 rounded whitespace-pre-wrap"><strong>{t('prompt')}</strong> {entry.data.prompt}</p>
+                                        <p className="mt-1 p-2 bg-stone-200 rounded whitespace-pre-wrap"><strong>{t('response')}</strong> {entry.data.response}</p>
+                                    </div>
+                                ) : (
+                                    <div className={`flex gap-2 ${entry.type === 'system_event' ? 'text-stone-500 italic' : ''}`}>
+                                        <span className="text-stone-400 flex-shrink-0">{new Date(entry.timestamp).toLocaleTimeString()}</span>
+                                        <p>{entry.message}</p>
+                                    </div>
+                                )}
+                            </div>
+                        ))
                     )}
                 </div>
 

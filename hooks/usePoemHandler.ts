@@ -83,18 +83,16 @@ export const usePoemHandler = (t: (key: any, replacements?: any) => string) => {
             const sanitizedLines = poemLines.map(line => line.replace(/[<>{}[\]()]/g, ''));
             let promptText: string;
             let contents: any;
-            let basePrompt = t('poemPromptBase');
+            let basePrompt = t('poemPromptBase', { lineCount: poemLines.length });
             
             if (isRestricted) { basePrompt += ` ${t('poemPromptRestriction')}`; }
             else if (capturedImage) { basePrompt += ` ${t('poemPromptInspiration')}`; }
             else { basePrompt += ` ${t('poemPromptArtlessInspiration')}`; }
             
             const anything = t('anythingPlaceholder');
-            const themes = t('poemPromptThemes', {
-                line1: sanitizedLines[0] || anything,
-                line2: sanitizedLines[1] || anything,
-                line3: sanitizedLines[2] || anything,
-            });
+            const themes = sanitizedLines
+                .map((line, index) => `Line ${index + 1} theme: ${line || anything}`)
+                .join('\n');
 
             if (isArtlessMode || !capturedImage) {
                 promptText = `${basePrompt}\n${themes}`;
