@@ -5,9 +5,42 @@ import { useArtHandler } from './hooks/useArtHandler';
 import { usePoemHandler } from './hooks/usePoemHandler';
 import { usePersistenceHandler } from './hooks/usePersistenceHandler';
 import { useUIHandler } from './hooks/useUIHandler';
-import type { LikedPoem } from './types';
+import type { LikedPoem, Artwork } from './types';
 
 declare const html2canvas: any;
+
+const getShareablePoemText = (
+    artworkInfo: Artwork | null,
+    isArtlessMode: boolean,
+    editablePoem: string,
+    t: (key: any, replacements?: any) => string
+): string => {
+    if (isArtlessMode || !artworkInfo) {
+        return t('artlessShareIntro', { poemText: editablePoem });
+    }
+
+    const { title, artist, medium, source } = artworkInfo;
+
+    let creditHashtag = '';
+    if (source === t('sourceAIC')) {
+        creditHashtag = '#AIC';
+    } else if (source === t('sourceVA')) {
+        creditHashtag = '#VA';
+    }
+
+    const isTitleValid = title && title.toLowerCase() !== 'untitled' && title.toLowerCase() !== 'none';
+    if (isTitleValid) {
+        return t('shareIntroTitle', { title, poemText: editablePoem, creditHashtag });
+    }
+
+    const isArtistValid = artist && artist.toLowerCase() !== 'unknown artist' && artist.toLowerCase() !== 'none';
+    if (isArtistValid) {
+        return t('shareIntroArtist', { artist, poemText: editablePoem, creditHashtag });
+    }
+
+    return t('shareIntroMedium', { medium, poemText: editablePoem, creditHashtag });
+};
+
 
 export const useAppController = () => {
     // === HOOKS INITIALIZATION ===
@@ -392,8 +425,7 @@ export const useAppController = () => {
     const handleShareFinalPoem = async () => {
         if (!isShareApiAvailable || !editablePoem) return;
     
-        const artworkTitle = artworkInfo?.title || t('artlessMode');
-        const shareText = t('shareFinalPoemText', { poemText: editablePoem, artworkTitle });
+        const shareText = getShareablePoemText(artworkInfo, isArtlessMode, editablePoem, t);
     
         const shareData = {
             title: t('shareTitle'),
@@ -413,8 +445,7 @@ export const useAppController = () => {
     const handleCopyFinalPoem = useCallback(async (): Promise<boolean> => {
         if (!editablePoem) return false;
     
-        const artworkTitle = artworkInfo?.title || t('artlessMode');
-        const poemTextToCopy = t('shareFinalPoemText', { poemText: editablePoem, artworkTitle });
+        const poemTextToCopy = getShareablePoemText(artworkInfo, isArtlessMode, editablePoem, t);
     
         try {
             await navigator.clipboard.writeText(poemTextToCopy);

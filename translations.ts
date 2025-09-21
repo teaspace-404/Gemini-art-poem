@@ -22,7 +22,6 @@ type TranslationKeys = {
     copyPoemTitle: string;
     poemCopied: string;
     shareWIPPoemText: string;
-    shareFinalPoemText: string;
     likeTitle: string;
     unlikeTitle: string;
     newPoemTitle: string;
@@ -58,6 +57,12 @@ type TranslationKeys = {
     feedbackModalProceed: string;
     mailtoSubject: string;
     mailtoBody: string;
+
+    // Sharing logic
+    shareIntroTitle: string;
+    shareIntroArtist: string;
+    shareIntroMedium: string;
+    artlessShareIntro: string;
 
 
     // ArtworkDisplay.tsx
@@ -153,8 +158,7 @@ export const translations: { [key: string]: TranslationKeys } = {
     shareTitle: 'Share Poem',
     copyPoemTitle: 'Copy Poem to Clipboard',
     poemCopied: 'Copied!',
-    shareWIPPoemText: "Check out this poem I'm writing with Poem for Art:\n\n{poemText}\n\n#PoemForArt",
-    shareFinalPoemText: "I created this poem inspired by '{artworkTitle}':\n\n{poemText}\n\n#PoemForArt",
+    shareWIPPoemText: "Check out this poem I'm writing with Poem for Art:\n\n{poemText}\n\n#PoemForArt2025",
     likeTitle: 'Like',
     unlikeTitle: 'Unlike',
     newPoemTitle: 'Generate a new poem',
@@ -190,6 +194,10 @@ export const translations: { [key: string]: TranslationKeys } = {
     feedbackModalProceed: 'Open Email Client',
     mailtoSubject: 'Feedback for Poem for Art',
     mailtoBody: "Hi!\n\nI have some feedback or a bug to report for the Poem for Art app.\n\n**My Feedback/Bug Description:**\n\n\n**Device/Browser (if applicable):**\n\n(Please attach a screenshot here if it helps explain the issue!)",
+    shareIntroTitle: "I created this poem inspired by '{title}':\n\n{poemText}\n\n{creditHashtag} #PoemForArt2025",
+    shareIntroArtist: "I created this poem inspired by a piece from {artist}:\n\n{poemText}\n\n{creditHashtag} #PoemForArt2025",
+    shareIntroMedium: "I created this poem inspired by a {medium}:\n\n{poemText}\n\n{creditHashtag} #PoemForArt2025",
+    artlessShareIntro: "I created this poem:\n\n{poemText}\n\n#PoemForArt2025",
     upcomingFeature: 'Upcoming Feature',
     selectSource: 'Select a Source',
     sourceAIC: 'Art Institute of Chicago',
@@ -266,8 +274,7 @@ export const translations: { [key: string]: TranslationKeys } = {
     shareTitle: '分享诗歌',
     copyPoemTitle: '复制诗歌到剪贴板',
     poemCopied: '已复制！',
-    shareWIPPoemText: "看看我用“艺术之诗”写的这首诗：\n\n{poemText}\n\n#艺术之诗",
-    shareFinalPoemText: "我从《{artworkTitle}》中获得灵感，创作了这首诗：\n\n{poemText}\n\n#艺术之诗",
+    shareWIPPoemText: "看看我用“艺术之诗”写的这首诗：\n\n{poemText}\n\n#PoemForArt2025",
     likeTitle: '喜欢',
     unlikeTitle: '取消喜欢',
     newPoemTitle: '生成一首新诗',
@@ -303,6 +310,10 @@ export const translations: { [key: string]: TranslationKeys } = {
     feedbackModalProceed: '打开邮件客户端',
     mailtoSubject: '关于“艺术之诗”的反馈',
     mailtoBody: "你好！\n\n我有一些关于“艺术之诗”应用的反馈或错误报告。\n\n**我的反馈/错误描述：**\n\n\n**设备/浏览器（如果适用）：**\n\n（如果屏幕截图有助于解释问题，请在此处附上！）",
+    shareIntroTitle: "我从《{title}》中获得灵感，创作了这首诗：\n\n{poemText}\n\n{creditHashtag} #PoemForArt2025",
+    shareIntroArtist: "我从艺术家 {artist} 的一幅作品中获得灵感，创作了这首诗：\n\n{poemText}\n\n{creditHashtag} #PoemForArt2025",
+    shareIntroMedium: "我从一幅{medium}作品中获得灵感，创作了这首诗：\n\n{poemText}\n\n{creditHashtag} #PoemForArt2025",
+    artlessShareIntro: "我创作了这首诗：\n\n{poemText}\n\n#PoemForArt2025",
     upcomingFeature: '即将推出',
     selectSource: '选择来源',
     sourceAIC: '芝加哥艺术博物馆',

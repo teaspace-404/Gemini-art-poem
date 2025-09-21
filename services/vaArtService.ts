@@ -29,21 +29,25 @@ const parseArtworkResponse = (data: any): Artwork => {
 
 export const vaArtService = {
     fetchRandomArtwork: async (): Promise<Artwork> => {
-        // The V&A API supports a `random=true` parameter for efficient random fetching
-        const response = await fetch(`${API_SEARCH_URL}?q_object_type=painting&page_size=50&random=true`);
+        // The V&A API supports a `random=true` parameter for efficient random fetching.
+        // By removing the object type filter and adding `images_exist=true`, we get a wider, more reliable
+        // range of art while ensuring that the selected piece has an image that can be re-fetched by ID later.
+        const response = await fetch(`${API_SEARCH_URL}?page_size=100&random=true&images_exist=true`);
         if (!response.ok) {
             throw new Error('Failed to fetch artwork list from the V&A museum.');
         }
 
         const data = await response.json();
+        // We still filter client-side as a fallback, ensuring both image ID and URL base are present.
         const artworksWithImages = data.records.filter((art: any) => art._primaryImageId && art._images?._iiif_image_base_url);
         
         if (artworksWithImages.length === 0) {
             throw new Error('No artworks with images were found from V&A.');
         }
 
-        // With `random=true`, we can reliably take the first valid result.
-        return parseArtworkResponse(artworksWithImages[0]);
+        // Select a random artwork from the filtered list for variety.
+        const randomArt = artworksWithImages[Math.floor(Math.random() * artworksWithImages.length)];
+        return parseArtworkResponse(randomArt);
     },
 
     fetchArtworkById: async (id: string): Promise<Artwork> => {
